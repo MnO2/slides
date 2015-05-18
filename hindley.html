@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+
+      .red    { color: #FF4943; }
+      .gray   { color: #787878; }
+      .green  { color: #87A558; }
+      .blue   { color: #41C8F0; }
+      .yellow { color: #DBEC62; }
+      .large p { font-size: 4em; }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Hindley Milner Type System
+
+![h-and-m](image/HM.png)
+
+### Paul Meng
+
+---
+
+## What part of types don't you understand
+
+![what-part](image/what_part_of_types_dont_you_understand.jpg)
+--
+
+![wtf](image/jackie-chan-wtf.png)
+
+
+---
+
+
+## Hindley Milner Type Rules
+
+![syntax-directed-hm](image/syntax_directed_hm.jpg)
+
+* It's quite daunting at first glance, and you just can't understand any single bit of it if you are not from a similar background.
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe it is the language used in academy. The purpose is to be exact but not for comprehension.
+--
+
+* Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
+--
+
+* Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
+--
+
+* You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
+  - Haskell's type system is much more complicated. But as a ML family member, it is quite similar.
+--
+
+* It's unclear why do we need it? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+
+---
+
+## Using predicate logic as lightly as possible
+
+* This talk tries to derive it from intuition and examples.
+* Trade off exactnesss for easier comprehension.
+* We would define the simplified one and gradually move to the harder ones.
+
+
+---
+
+## Starting off with an observation
+
+* In McDonald, a simple burger is consist of a piece of bread, beef and another piece of bread.
+* Let's "formulate" this observation with a simple language
+
+``` haskell
+data Term = Var Name              -- x
+          | Lit Int               -- 3
+          | App Term Term         -- f x
+          | Lam Name Term         -- \x -> x
+```
+
+* I would really love to call this language as "System Mc", but that is actually a misnomer. It's called lambda calculus.
+* Of course anyone could see this it is unsafe. You could put anything into the x, y, z and makes it a burger. (Cockroach?)
+
+``` haskell
+\x \y \z. b
+```
+
+---
+
+## Simply typed lambda calculus
+
+* Therefore we extend this language, to add types.
+
+$$ 
+\rho ::= \tau \\\
+\tau::= \tau \rightarrow \tau| T \\\
+$$
+
+* And a built-in rule
+
+$$
+Bread \rightarrow Beef \rightarrow Bread \rightarrow Burger
+$$
+
+
+``` haskell
+\x: Bread. \y: Meat \z: Bread. b
+```
+
+
+---
+
+## It's not only for type checking.
+
+* Because the rule is not ambiguous, we could run the rule checking "backward" to learn the type of a term, with all the constant's type known.
+* With human brains, we could see the answer by the rules in a glance, but how to derive an algorithm?
+
+* Rule:
+$$
+Bread \rightarrow Beef \rightarrow Bread \rightarrow Burger
+$$
+
+* Missing y type
+
+``` haskell
+\x: Bread. \y: ??? \z: Bread. b
+```
+
+
+``` haskell
+type Rho   = Type
+type Tau   = Type
+
+data Type = Fun    Type Type ›    -- Function type
+    ›     | TyCon  TyCon      ›   -- Type constants
+    ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
+    ›     | MetaTv MetaTv     ›   -- A meta type variable
+
+data TyVar
+  = BoundTv String› ›   -- A type variable bound by a ForAll
+```
+
+
+---
+
+# Formulation
+
+* We establish an environment $ \Gamma $ is the things we have already known. Mapping term to type
+
+$$ \Gamma : x \rightarrow Bread, z \rightarrow Bread, b \rightarrow Burger $$
+
+* For the lambda, it is actually a abstract syntax tree, we have to walk the tree, and "unify" constraints.
+
+![slc-ex1](image/slc_ex1.svg)
+
+
+---
+
+## What is unification ?
+
+* A set of equations, with a definition of what is equal (equivalence relation in mathematical terminology)
+
+$$ \\{ a = x \\} $$
+
+
+* A substitution 
+
+$$ \\{ x \rightarrow a \\} $$
+
+* And after applying the substitution, both sides of the equation are equal
+
+$$ a \\{ x \rightarrow a \\}  =  x \\{ x \rightarrow a \\} $$
+
+* The substitution is called unifier
+
+---
+
+## Unification 
+
+* Example
+
+$$
+T_1 \rightarrow T_1 * bool = (T_3 + int) \rightarrow T_2
+$$
+
+* Then we have a solution 
+
+$$ \\{ T_1 \rightarrow T_3 + int, T_2 \rightarrow (T_3 + int) * bool \\} $$
+
+---
+
+## Proble Reformation of Type inference
+
+* Walk the tree and collect the type constaints, then these constraints collectively formulate a unification problem
+* Solve the unification problem with Robinson's unification algorithm
+
+---
+
+## Robinson's Unification Algorithm
+
+$$
+unify ( \Phi ) = \Phi \\\
+unify ( \\{ C = C \\} \cup E ) = unify (E)  \\\
+unify ( \\{ C_1 = C_2 \\} \cup E ) = error \\\
+unify ( \\{ T = T \\} \cup E) = unify(E) \\\
+unify ( \\{ T = \tau \\} \cup E) = unify(\\{ \tau = T \\} \cup E)  \\\
+unify ( \\{ \tau_1 \rightarrow \tau_2 = \tau_1^{\prime} \rightarrow \tau_2^{\prime} \\} \cup E ) = uify ( \\{ \tau_1 = \tau_1^{\prime}, \tau_2 = \tau_2^{\prime} \\} \cup E)  \\\
+unify ( \\{ \tau = \tau^{\prime} \cup E \\}) = error
+$$
+
+
+
+---
+
+## Robinson's Unification Algorithm
+
+``` haskell
+unify :: Tau -> Tau -> Tc ()
+
+unify ty1 ty2•
+  | badType ty1 || badType ty2  -- Compiler error
+  = failTc (text "Panic! Unexpected types in unification:" <+>•
+            vcat [ppr ty1, ppr ty2])
+
+unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2 = return ()
+unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
+unify (MetaTv tv) ty = unifyVar tv ty
+unify ty (MetaTv tv) = unifyVar tv ty
+
+unify (Fun arg1 res1)
+      (Fun arg2 res2)
+  = do { unify arg1 arg2; unify res1 res2 }
+
+unify (TyCon tc1) (TyCon tc2)•
+  | tc1 == tc2•
+  = return ()
+
+unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
+```
+
+---
+
+## Back to Inference Example
+
+``` haskell
+\x: Bread. \y: ??? \z: Bread. b
+```
+
+* We have the constraints collected as the following.
+
+``` haskell
+a -> b -> c -> d = Bread -> Meat -> Bread -> Burger
+a = Bread
+c = Bread
+d = Burger
+```
+
+* Solving this gives us a unifier
+``` haskell
+a = Bread
+b = Meat
+c = Bread
+d = Burger
+```
+
+
+---
+
+## Jotting it down into code
+
+``` haskell
+inferSigma :: Term -> Tc Sigma
+inferSigma = undefined
+
+typecheck :: Term -> TC Sigma
+typecheck :: Term -> Tc Sigma
+typecheck e = do { ty <- inferSigma e }
+```
+
+
+---
+
+## The defect of simply typed lambda calculus
+
+* Suppose that we would like to have a generalized version of hamburger making.
+* Hamburger is not only for meat, but could be fish. And we could use Rice for Bread
+
+```
+(\f -> ((f bread meat bread), (f bread fish bread), (f rice meat rice)) ) (make)
+```
+
+* The trick discovered by Hindley and Milner independently is to add a "let"
+* It's called Let polymorphism.
+
+```
+let f = make in ((f bread meat bread), (f bread fish bread), (f rice meat rice))
+```
+
+* The type system is also generalized. For the language to describe "type" is added by "forall"
+```
+forall a b c. a -> b -> c -> Burger
+```
+
+
+---
+
+## Let Polymorphism (Extension of Simly-Typed)
+
+$$ 
+\rho ::= \tau \\\
+\tau::= \tau \rightarrow \tau| T \\\
+$$
+
+``` haskell
+data Term = Var Name              -- x
+          | Lit Int               -- 3
+          | App Term Term         -- f x
+          | Lam Name Term         -- \ x -> x
+          | Let Name Term Term    -- let x = f y in x+1
+          | Ann Term Sigma        -- (f x) :: Int
+```
+
+* We add a "Let Name Term Term" here
+* Polytypes (We use Sigma here) are types containing variables bound by one or more for-all quantifiers
+* The inference algorithm is with the same workflow, with unification algorithm extended.
+
+---
+
+## Type-level structure
+
+``` haskell
+type Sigma = Type
+type Rho   = Type›  -- No top-level ForAll
+type Tau   = Type›  -- No ForAlls anywhere
+
+data Type = ForAll [TyVar] Rho›   -- Forall type
+›     | Fun    Type Type ›    -- Function type
+›     | TyCon  TyCon      ›   -- Type constants
+›     | TyVar  TyVar      ›   -- Always bound by a ForAll
+›     | MetaTv MetaTv     ›   -- A meta type variable
+
+data TyVar
+  = BoundTv String› ›   -- A type variable bound by a ForAll
+  | SkolemTv String Uniq›   -- A skolem constant; the String is•
+```
+
+---
+
+## Instantiation
+
+* With the polytype introduced, an acompanying concept is introduced, it's called instantiation.
+* It's replacing "type variable" identified by "schema" with fresh "type variable"
+
+``` haskell
+instSigma :: Sigma -> Expected Rho -> Tc ()
+-- Invariant: if the second argument is (Check rho),
+-- ›      then rho is in weak-prenex form
+instSigma t1 (Check t2) = unify t1 t2
+instSigma t1 (Infer r)  = do { t1' <- instantiate t1
+                             ; writeTcRef r t1' }
+
+instantiate :: Sigma -> Tc Rho
+-- Instantiate the topmost for-alls of the argument type
+-- with flexible type variables
+instantiate (ForAll tvs ty)•
+  = do { tvs' <- mapM (\_ -> newMetaTyVar) tvs
+       ; return (substTy tvs (map MetaTv tvs') ty) }
+instantiate ty
+```
+
+---
+
+## Generalization
+
+* Another concept introduced is called "generalization.
+* It's replacing a "type variable" into a "polytype". Think it like a C++ template that could generate function specialization.
+
+
+``` haskell
+inferSigma :: Term -> Tc Sigma
+inferSigma e
+   = do { exp_ty <- inferRho e
+        ; env_tys <- getEnvTypes
+        ; env_tvs <- getMetaTyVars env_tys
+        ; res_tvs <- getMetaTyVars [exp_ty]
+        ; let forall_tvs = res_tvs \\ env_tvs
+        ; quantify forall_tvs exp_ty }
+```
+
+
+---
+
+
+## Inference: Generalization
+
+``` haskell
+tcRho (Let var rhs body) exp_ty
+  = do { var_ty <- inferSigma rhs
+       ; extendVarEnv var var_ty (tcRho body exp_ty) }
+```
+
+---
+
+## Inference: Instantiation
+
+``` haskell
+tcRho (Lit _) exp_ty
+  = instSigma intType exp_ty
+
+tcRho (Var v) exp_ty•
+  = do { v_sigma <- lookupVar v•
+       ; instSigma v_sigma exp_ty }
+
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkSigma arg arg_ty
+       ; instSigma res_ty exp_ty }
+tcRho (Ann body ann_ty) exp_ty
+   = do { checkSigma body ann_ty
+        ; instSigma ann_ty exp_ty }
+```
+
+
+---
+
+
+## Inference: Rest
+
+``` haskell
+tcRho :: Term -> Expected Rho -> Tc ()
+-- Invariant: if the second argument is (Check rho),
+-- ›      then rho is in weak-prenex form
+
+tcRho (Lam var body) (Check exp_ty)
+  = do { (var_ty, body_ty) <- unifyFun exp_ty•
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+
+tcRho (Lam var body) (Infer ref)
+  = do { var_ty  <- newTyVarTy
+       ; body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+
+```
+
+
+---
+
+## What's the defect of hindley-milner type system?
+
+* The worst case of the time complexity is exponential.
+
+``` haskell
+let b = true in
+let f0 = λx. x+1 in
+let f1 = λx. if b then f0 else λy.x y in
+let f2 = λx. if b then f1 else λy.x y in
+.
+.
+let fn = λx. if b then fn−1 else λy.x y in
+```
+
+* reference would break the type system's soundness
+
+* Even with the addition of "let", it only tells us to "generalize" at the syntax where "let" happened.
+
+```haskell
+(\f -> (f "foo", f 13)) (\x -> x)
+```
+
+
+---
+
+## Higher-rank type system 
+
+* To solve the problem of let polymorphism where it is not generalized at the "argument"
+* Consider the following use case.
+
+```haskell
+make :: (forall a. a -> a) -> a -> b -> c -> (a, b, c)
+make= undefined
+
+make2burgs :: (forall a. a -> a) -> (6Pound, 9Pound)
+make2burgs g = let f x = (x bread meat bread, x bread fish bread)
+               in f g
+
+make2burgs make
+```
+
+* We add a type annotation to help the type system to generalize at the argument, without a big change in hindley-milner type system.
+
+
+---
+
+## Higher-rank type system
+
+* Add type annotation in the abstraction rule, i.e. ALam
+
+
+$$ 
+\rho ::= \tau | \sigma \rightarrow \sigma^{\prime} \\\
+\tau::= \tau \rightarrow \tau| T \\\
+$$
+
+``` haskell
+data Term = Var Name              -- x
+          | Lit Int               -- 3
+          | App Term Term         -- f x
+          | Lam Name Term         -- \ x -> x
+          | ALam Name Sigma Term  -- \ x -> x
+          | Let Name Term Term    -- let x = f y in x+1
+          | Ann Term Sigma        -- (f x) :: Int
+```
+
+---
+
+## Subsumption
+
+* The type without the hindley milner
+
+* With the type annotation added, the type derived from hindley milner.
+$$
+\forall a. a \rightarrow (\forall b.b \rightarrow b)
+$$
+
+* And it is actually equivalent to, but the type checker doesn't aware of that by the previous rules
+$$
+\forall ab. a \rightarrow b \rightarrow b
+$$
+
+* We hope that the following to hold. That is, get some tricks to make the generalized types being "subsumed" to another generalized type.
+$$
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \leq \forall ab. a \rightarrow b \rightarrow b \\\
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \geq \forall ab. a \rightarrow b \rightarrow b \\\
+$$
+
+
+---
+
+## Subsumption
+
+* prenex form: With all of the "forall" at the "head" of the type annotation.
+
+* prenex conversion
+
+$$
+\forall a. a \rightarrow (\forall b.b \rightarrow b)
+$$
+
+to 
+
+$$
+\forall ab. a \rightarrow b \rightarrow b
+$$
+
+* It's sometimes called Skolemization.
+
+
+---
+
+## Skolemization
+
+``` haskell
+skolemise :: Sigma -> Tc ([TyVar], Rho)
+-- Performs deep skolemisation, retuning the•
+-- skolem constants and the skolemised type
+skolemise (ForAll tvs ty)›  -- Rule PRPOLY
+  = do { sks1 <- mapM newSkolemTyVar tvs
+       ; (sks2, ty') <- skolemise (substTy tvs (map TyVar sks1) ty)
+       ; return (sks1 ++ sks2, ty') }
+skolemise (Fun arg_ty res_ty)›  -- Rule PRFUN
+  = do { (sks, res_ty') <- skolemise res_ty
+       ; return (sks, Fun arg_ty res_ty') }
+skolemise ty ›  ›   ›   -- Rule PRMONO
+  = return ([], ty)
+```
+
+
+---
+
+## Subsumption in code
+
+``` haskell
+subsCheck :: Sigma -> Sigma -> Tc ()
+-- (subsCheck args off exp) checks that•
+--     'off' is at least as polymorphic as 'args -> exp'
+
+subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
+  = do { (skol_tvs, rho2) <- skolemise sigma2
+       ; subsCheckRho sigma1 rho2
+       ; esc_tvs <- getFreeTyVars [sigma1,sigma2]
+       ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+       ; check (null bad_tvs)
+               (vcat [text "Subsumption check failed:",
+                      nest 2 (ppr sigma1),
+                      text "is not as polymorphic as",
+                      nest 2 (ppr sigma2)])
+    }
+```
+
+
+---
+
+## Subsumption in code
+
+``` haskell
+
+subsCheckRho :: Sigma -> Rho -> Tc ()
+-- Invariant: the second argument is in weak-prenex form
+
+subsCheckRho sigma1@(ForAll _ _) rho2›   -- Rule SPEC
+  = do { rho1 <- instantiate sigma1
+       ; subsCheckRho rho1 rho2 }
+
+subsCheckRho rho1 (Fun a2 r2)            -- Rule FUN
+  = do { (a1,r1) <- unifyFun rho1; subsCheckFun a1 r1 a2 r2 }
+
+subsCheckRho (Fun a1 r1) rho2            -- Rule FUN
+  = do { (a2,r2) <- unifyFun rho2; subsCheckFun a1 r1 a2 r2 }
+
+subsCheckRho tau1 tau2                   -- Rule MONO
+  = unify tau1 tau2    -- Revert to ordinary unification
+
+subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
+```
+
+
+---
+
+## Put all of the extensions together
+
+``` haskell
+tcRho (ALam var var_ty body) (Check exp_ty)
+  = do { (arg_ty, body_ty) <- unifyFun exp_ty•
+       ; subsCheck arg_ty var_ty
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+
+tcRho (ALam var var_ty body) (Infer ref)
+  = do { body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+```
+
+---
+
+## Wrapping up
+
+* The hindley milner system is the foundation of Haskell98 standrad
+* Higher rank corresponds to GHC's extension -XHigher-Rank
+
+---
+
+class: center, middle, large
+
+Thank you
+
+
+    </textarea>
+    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js"></script>
+    <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured" type="text/javascript"></script>
+    <script>
+      var slideshow = remark.create();
+
+      // Setup MathJax
+      MathJax.Hub.Config({
+          tex2jax: {
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+          }
+      });
+      MathJax.Hub.Queue(function() {
+          $(MathJax.Hub.getAllJax()).map(function(index, elem) {
+              return(elem.SourceElement());
+          }).parent().addClass('has-jax');
+      });
+
+      MathJax.Hub.Configured();
+    </script>
+  </body>
+</html>
