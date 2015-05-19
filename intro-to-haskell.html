@@ -965,11 +965,7 @@ Note function `error :: String -> a` reports assertion failures
 
         function load_slides() {
             var query = window.location.search.substring(1);
-            var slideshow = remark.create({
-                sourceUrl: query ? "slides/" + query : "README.md",
-                highlightStyle: 'default',
-                highlightLanguage: 'sh'
-            });
+            var slideshow = remark.create();
 
             // Setup MathJax
             MathJax.Hub.Config({

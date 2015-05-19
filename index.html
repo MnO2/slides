@@ -25,12 +25,14 @@
   </head>
   <body>
     <textarea id="source">
+
 class: center, middle
 
-# MnO2’s Slides
+## MnO2’s Slides
 
-- [Introduction to Haskell](slides/?intro-to-haskell.md)
-- [Hindley Milner Type System](slides/?hindley-milner-type-system.md)
+* [Introduction to Haskell](slides/intro-to-haskell.html)
+* [Hindley Milner Type System](slides/hindley.html)
+
     </textarea>
     <script>
         var is_local = (window.location.hostname == "localhost");
@@ -44,11 +46,7 @@ class: center, middle
 
         function load_slides() {
             var query = window.location.search.substring(1);
-            var slideshow = remark.create({
-                sourceUrl: query ? "slides/" + query : "README.md",
-                highlightStyle: 'default',
-                highlightLanguage: 'sh'
-            });
+            var slideshow = remark.create();
 
             // Setup MathJax
             MathJax.Hub.Config({
