@@ -108,17 +108,13 @@ data Term = Var Name              -- x
 
 * Therefore we extend this language, to add types.
 
-$$ 
-\rho ::= \tau \\\
-\tau::= \tau \rightarrow \tau| T \\\
-$$
-
-* And a built-in rule
+* Given a built-in rule (We, the programmer as the oracle, declare this as the Hamburger theorem.)
 
 $$
 Bread \rightarrow Beef \rightarrow Bread \rightarrow Burger
 $$
 
+* Then we could check if this program follows the rule of the theorem.
 
 ``` haskell
 \x: Bread. \y: Meat \z: Bread. b
@@ -143,6 +139,41 @@ $$
 \x: Bread. \y: ??? \z: Bread. b
 ```
 
+---
+
+## Formulation
+
+* What kind of information do we have ?
+--
+
+* An environment $ \Gamma $ is the things we have already known. Mapping term to type
+
+$$ \Gamma : x \rightarrow Bread, z \rightarrow Bread, b \rightarrow Burger $$
+--
+
+* An lambda expression, or parsed abstract syntax tree.
+
+![slc-ex1](image/slc_ex1.svg)
+--
+
+* We don't know the "type" of the missing part, using a "type variable" to represent it.
+--
+
+* Caveat: the type variable doesn't incorporate the "arrow" for "Abstraction", we need it to expand the "type variable" to have the same structure.
+
+--- 
+
+## Formulation: Type variable expansion
+
+* The "type variable" we are talking about is actually "meta type variable", used for the real "type variable" expansion.
+
+* Rule for generating type variable expansion in type inference.
+$$ 
+\rho ::= \tau \\\
+\tau::= \tau \rightarrow \tau  | T \\\
+$$
+
+* In Haskell
 
 ``` haskell
 type Rho   = Type
@@ -151,24 +182,21 @@ type Tau   = Type
 data Type = Fun    Type Type ›    -- Function type
     ›     | TyCon  TyCon      ›   -- Type constants
     ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
-    ›     | MetaTv MetaTv     ›   -- A meta type variable
 
 data TyVar
-  = BoundTv String› ›   -- A type variable bound by a ForAll
+  = SkolemTv String Uniq›   -- A skolem constant; the String is•
 ```
 
+* Here the "Type" is the "meta type variable" we are talking about.
+* Now we make the type level structure matches the value level structure. Then what we have to do is to collect constraints, and "unify" them.
 
----
-
-# Formulation
-
-* We establish an environment $ \Gamma $ is the things we have already known. Mapping term to type
-
-$$ \Gamma : x \rightarrow Bread, z \rightarrow Bread, b \rightarrow Burger $$
-
-* For the lambda, it is actually a abstract syntax tree, we have to walk the tree, and "unify" constraints.
-
-![slc-ex1](image/slc_ex1.svg)
+* For example, unifying constraints look like this. (What is b ?)
+``` haskell
+a -> b -> c -> d = Bread -> Meat -> Bread -> Burger
+a = Bread
+c = Bread
+d = Burger
+```
 
 
 ---
@@ -206,7 +234,7 @@ $$ \\{ T_1 \rightarrow T_3 + int, T_2 \rightarrow (T_3 + int) * bool \\} $$
 
 ---
 
-## Proble Reformation of Type inference
+## Problem Reformation of Type inference
 
 * Walk the tree and collect the type constaints, then these constraints collectively formulate a unification problem
 * Solve the unification problem with Robinson's unification algorithm
@@ -224,8 +252,6 @@ unify ( \\{ T = \tau \\} \cup E) = unify(\\{ \tau = T \\} \cup E)  \\\
 unify ( \\{ \tau_1 \rightarrow \tau_2 = \tau_1^{\prime} \rightarrow \tau_2^{\prime} \\} \cup E ) = uify ( \\{ \tau_1 = \tau_1^{\prime}, \tau_2 = \tau_2^{\prime} \\} \cup E)  \\\
 unify ( \\{ \tau = \tau^{\prime} \cup E \\}) = error
 $$
-
-
 
 ---
 
@@ -254,6 +280,49 @@ unify (TyCon tc1) (TyCon tc2)•
 
 unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
 ```
+
+
+---
+
+
+## Robinson's Unification Algorithm
+
+```
+unifyVar :: MetaTv -> Tau -> Tc ()
+-- Invariant: tv1 is a flexible type variable
+unifyVar tv1 ty2        -- Check whether tv1 is bound
+  = do { mb_ty1 <- readTv tv1•••
+       ; case mb_ty1 of
+           Just ty1 -> unify ty1 ty2
+           Nothing  -> unifyUnboundVar tv1 ty2 }
+
+unifyUnboundVar :: MetaTv -> Tau -> Tc ()
+-- Invariant: the flexible type variable tv1 is not bound
+unifyUnboundVar tv1 ty2@(MetaTv tv2)
+  = do { -- We know that tv1 /= tv2 (else the•
+         -- top case in unify would catch it)
+         mb_ty2 <- readTv tv2
+       ; case mb_ty2 of
+           Just ty2' -> unify (MetaTv tv1) ty2'
+           Nothing  -> writeTv tv1 ty2 }•
+
+unifyUnboundVar tv1 ty2
+  = do { tvs2 <- getMetaTyVars [ty2]
+       ; if tv1 `elem` tvs2 then
+            occursCheckErr tv1 ty2
+         else
+            writeTv tv1 ty2 }
+
+unifyFun :: Rho -> Tc (Sigma, Rho)
+--      (arg,res) <- unifyFunTy fun
+-- unifies 'fun' with '(arg -> res)'
+unifyFun (Fun arg res) = return (arg,res)
+unifyFun tau           = do { arg_ty <- newTyVarTy
+                            ; res_ty <- newTyVarTy
+                            ; unify tau (arg_ty --> res_ty)
+                            ; return (arg_ty, res_ty) }
+```
+
 
 ---
 
@@ -285,13 +354,47 @@ d = Burger
 
 ## Jotting it down into code
 
-``` haskell
-inferSigma :: Term -> Tc Sigma
-inferSigma = undefined
+* Then the typechecking is just allocating.
 
-typecheck :: Term -> TC Sigma
-typecheck :: Term -> Tc Sigma
-typecheck e = do { ty <- inferSigma e }
+``` haskell
+typecheck :: Term -> Tc Rho
+typecheck e = do { ty <- inferRho e }
+
+inferRho :: Term -> Tc Rho
+inferRho expr•
+  = do { ref <- newTcRef (error "inferRho: empty result")
+       ; tcRho expr (Infer ref)
+       ; readTcRef ref }
+```
+
+* Inference 
+
+``` haskell
+tcRho :: Term -> Expected Rho -> Tc ()
+-- Invariant: if the second argument is (Check rho),
+-- ›      then rho is in weak-prenex form
+
+tcRho (Lam var body) (Check exp_ty)
+  = do { (var_ty, body_ty) <- unifyFun exp_ty•
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+
+tcRho (Lam var body) (Infer ref)
+  = do { var_ty  <- newTyVarTy
+       ; body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+
+tcRho (Lit _) exp_ty
+  = instSigma intType exp_ty
+
+tcRho (Var v) exp_ty•
+  = do { v_sigma <- lookupVar v•
+       ; instSigma v_sigma exp_ty }
+
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkSigma arg arg_ty
+       ; instSigma res_ty exp_ty }
 ```
 
 
@@ -345,16 +448,19 @@ data Term = Var Name              -- x
 
 ## Type-level structure
 
+* We add another meta variable "Sigma" for type level expansion.
+* And "BoundTv" to capture the "forall" polytype.
+
 ``` haskell
 type Sigma = Type
 type Rho   = Type›  -- No top-level ForAll
 type Tau   = Type›  -- No ForAlls anywhere
 
 data Type = ForAll [TyVar] Rho›   -- Forall type
-›     | Fun    Type Type ›    -- Function type
-›     | TyCon  TyCon      ›   -- Type constants
-›     | TyVar  TyVar      ›   -- Always bound by a ForAll
-›     | MetaTv MetaTv     ›   -- A meta type variable
+    ›     | Fun    Type Type ›    -- Function type
+    ›     | TyCon  TyCon      ›   -- Type constants
+    ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
+    ›     | MetaTv MetaTv     ›   -- A meta type variable
 
 data TyVar
   = BoundTv String› ›   -- A type variable bound by a ForAll
@@ -367,6 +473,20 @@ data TyVar
 
 * With the polytype introduced, an acompanying concept is introduced, it's called instantiation.
 * It's replacing "type variable" identified by "schema" with fresh "type variable"
+
+* The left hand side could instantiate the right hand side.
+
+$$
+a \leq Int
+a \rightarrow a \leq Int \rightarrow Int
+a \rightarrow a \leq b \rightarrow b
+\forall a. a \rightarrow a \leq c \rightarrow c
+$$
+
+* How do we tell if one of the polytype could subsume another?
+* Skolemise one of the polytype, and see if the other polytype could instantiate it after skolemization.
+
+* In Haskell
 
 ``` haskell
 instSigma :: Sigma -> Expected Rho -> Tc ()
@@ -402,8 +522,18 @@ inferSigma e
         ; res_tvs <- getMetaTyVars [exp_ty]
         ; let forall_tvs = res_tvs \\ env_tvs
         ; quantify forall_tvs exp_ty }
-```
 
+
+checkSigma :: Term -> Sigma -> Tc ()
+checkSigma expr sigma
+= do { (skol_tvs, rho) <- skolemise sigma
+     ; checkRho expr rho
+     ; env_tys <- getEnvTypes
+     ; esc_tvs <- getFreeTyVars (sigma : env_tys)
+     ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+     ; check (null bad_tvs)
+             (text "Type not polymorphic enough") }
+```
 
 ---
 
@@ -436,28 +566,6 @@ tcRho (App fun arg) exp_ty
 tcRho (Ann body ann_ty) exp_ty
    = do { checkSigma body ann_ty
         ; instSigma ann_ty exp_ty }
-```
-
-
----
-
-
-## Inference: Rest
-
-``` haskell
-tcRho :: Term -> Expected Rho -> Tc ()
--- Invariant: if the second argument is (Check rho),
--- ›      then rho is in weak-prenex form
-
-tcRho (Lam var body) (Check exp_ty)
-  = do { (var_ty, body_ty) <- unifyFun exp_ty•
-       ; extendVarEnv var var_ty (checkRho body body_ty) }
-
-tcRho (Lam var body) (Infer ref)
-  = do { var_ty  <- newTyVarTy
-       ; body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
-
 ```
 
 
@@ -672,24 +780,49 @@ Thank you
 
 
     </textarea>
-    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js"></script>
-    <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured" type="text/javascript"></script>
     <script>
-      var slideshow = remark.create();
+        var is_local = (window.location.hostname == "localhost");
 
-      // Setup MathJax
-      MathJax.Hub.Config({
-          tex2jax: {
-          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-          }
-      });
-      MathJax.Hub.Queue(function() {
-          $(MathJax.Hub.getAllJax()).map(function(index, elem) {
-              return(elem.SourceElement());
-          }).parent().addClass('has-jax');
-      });
+        function add_script(src, callback) {
+            var s = document.createElement("script");
+            s.setAttribute("src", src);
+            s.onload = callback;
+            document.body.appendChild(s);
+        }
 
-      MathJax.Hub.Configured();
+        function load_slides() {
+            var query = window.location.search.substring(1);
+            var slideshow = remark.create({
+                sourceUrl: query ? "slides/" + query : "README.md",
+                highlightStyle: 'default',
+                highlightLanguage: 'sh'
+            });
+
+            // Setup MathJax
+            MathJax.Hub.Config({
+                tex2jax: {
+                    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+                }
+            });
+
+            MathJax.Hub.Queue(function() {
+                $(MathJax.Hub.getAllJax()).map(function(index, elem) {
+                    return(elem.SourceElement());
+                }).parent().addClass('has-jax');
+            });
+
+            MathJax.Hub.Configured();
+        }
+
+        if (is_local) {
+            add_script("javascript/remark-latest.min.js", function() {
+                add_script("javascript/MathJax.js", load_slides);
+            });
+        } else {
+            add_script("https://gnab.github.io/remark/downloads/remark-latest.min.js", function() {
+                add_script("http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured", load_slides);
+            });
+        }
     </script>
   </body>
 </html>
