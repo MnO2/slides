@@ -146,14 +146,13 @@ $$
 * What kind of information do we have ?
 --
 
-* An environment $ \Gamma $ is the things we have already known. Mapping term to type
+* An environment $\Gamma$ is the things we have already known. Mapping term to type
 
 $$ \Gamma : x \rightarrow Bread, z \rightarrow Bread, b \rightarrow Burger $$
 --
 
-* An lambda expression, or parsed abstract syntax tree.
+* A lambda expression, or parsed abstract syntax tree.
 
-![slc-ex1](image/slc_ex1.svg)
 --
 
 * We don't know the "type" of the missing part, using a "type variable" to represent it.
@@ -161,19 +160,22 @@ $$ \Gamma : x \rightarrow Bread, z \rightarrow Bread, b \rightarrow Burger $$
 
 * Caveat: the type variable doesn't incorporate the "arrow" for "Abstraction", we need it to expand the "type variable" to have the same structure.
 
---- 
+---
+
+![slc-ex1](image/slc_ex1.svg)
+
+---
 
 ## Formulation: Type variable expansion
 
 * The "type variable" we are talking about is actually "meta type variable", used for the real "type variable" expansion.
 
 * Rule for generating type variable expansion in type inference.
+
 $$ 
 \rho ::= \tau \\\
-\tau::= \tau \rightarrow \tau  | T \\\
+\tau ::= \tau \rightarrow \tau \vert T \\\
 $$
-
-* In Haskell
 
 ``` haskell
 type Rho   = Type
@@ -189,14 +191,6 @@ data TyVar
 
 * Here the "Type" is the "meta type variable" we are talking about.
 * Now we make the type level structure matches the value level structure. Then what we have to do is to collect constraints, and "unify" them.
-
-* For example, unifying constraints look like this. (What is b ?)
-``` haskell
-a -> b -> c -> d = Bread -> Meat -> Bread -> Burger
-a = Bread
-c = Bread
-d = Burger
-```
 
 
 ---
@@ -234,14 +228,11 @@ $$ \\{ T_1 \rightarrow T_3 + int, T_2 \rightarrow (T_3 + int) * bool \\} $$
 
 ---
 
-## Problem Reformation of Type inference
+## Problem Reformulation of Type inference
 
 * Walk the tree and collect the type constaints, then these constraints collectively formulate a unification problem
 * Solve the unification problem with Robinson's unification algorithm
-
----
-
-## Robinson's Unification Algorithm
+--
 
 $$
 unify ( \Phi ) = \Phi \\\
@@ -285,9 +276,7 @@ unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
 ---
 
 
-## Robinson's Unification Algorithm
-
-```
+``` haskell
 unifyVar :: MetaTv -> Tau -> Tc ()
 -- Invariant: tv1 is a flexible type variable
 unifyVar tv1 ty2        -- Check whether tv1 is bound
@@ -342,6 +331,7 @@ d = Burger
 ```
 
 * Solving this gives us a unifier
+
 ``` haskell
 a = Bread
 b = Meat
@@ -367,7 +357,7 @@ inferRho expr•
        ; readTcRef ref }
 ```
 
-* Inference 
+---
 
 ``` haskell
 tcRho :: Term -> Expected Rho -> Tc ()
@@ -477,14 +467,18 @@ data TyVar
 * The left hand side could instantiate the right hand side.
 
 $$
-a \leq Int
-a \rightarrow a \leq Int \rightarrow Int
-a \rightarrow a \leq b \rightarrow b
-\forall a. a \rightarrow a \leq c \rightarrow c
+a \leq Int \\\
+a \rightarrow a \leq Int \rightarrow Int \\\
+a \rightarrow a \leq b \rightarrow b \\\
+\forall a. a \rightarrow a \leq c \rightarrow c \\\
 $$
 
 * How do we tell if one of the polytype could subsume another?
 * Skolemise one of the polytype, and see if the other polytype could instantiate it after skolemization.
+
+---
+
+## Instantiation
 
 * In Haskell
 
@@ -797,15 +791,15 @@ Thank you
             // Setup MathJax
             MathJax.Hub.Config({
                 tex2jax: {
-                    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-                }
+                    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+                    processescapes: true,
+                },
+                jax: ["input/TeX","output/HTML-CSS"],
+                displayAlign: "left",
+                displayIndent: "2em"
             });
 
-            MathJax.Hub.Queue(function() {
-                $(MathJax.Hub.getAllJax()).map(function(index, elem) {
-                    return(elem.SourceElement());
-                }).parent().addClass('has-jax');
-            });
 
             MathJax.Hub.Configured();
         }
