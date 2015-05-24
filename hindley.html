@@ -85,7 +85,7 @@ class: center, middle
 
 ## Starting off with an observation
 
-* In McDonald, a simple burger is consist of a piece of bread, beef and another piece of bread.
+* In McDonald, a simple burger is consist of breads and beef.
 * Let's "formulate" this observation with a simple language
 
 ``` haskell
@@ -93,13 +93,14 @@ data Term = Var Name              -- x
           | Lit Int               -- 3
           | App Term Term         -- f x
           | Lam Name Term         -- \x -> x
+          | Ann Term Rho          -- (f x) :: Int
 ```
 
 * I would really love to call this language as "System Mc", but that is actually a misnomer. It's called lambda calculus.
-* Of course anyone could see this it is unsafe. You could put anything into the x, y, z and makes it a burger. (Cockroach?)
+* Of course anyone could see this it is unsafe. You could put anything into the x, y and makes it a burger. (Cockroach?)
 
 ``` haskell
-\x \y \z. b
+(\x -> \y -> burger) bread beef
 ```
 
 ---
@@ -111,13 +112,13 @@ data Term = Var Name              -- x
 * Given a built-in rule (We, the programmer as the oracle, declare this as the Hamburger theorem.)
 
 $$
-Bread \rightarrow Beef \rightarrow Bread \rightarrow Burger
+Bread \rightarrow Beef \rightarrow Burger
 $$
 
 * Then we could check if this program follows the rule of the theorem.
 
 ``` haskell
-\x: Bread. \y: Meat \z: Bread. b
+(\x: Bread -> \y: Beef -> burger) bread beef
 ```
 
 
@@ -130,72 +131,79 @@ $$
 
 * Rule:
 $$
-Bread \rightarrow Beef \rightarrow Bread \rightarrow Burger
+Bread \rightarrow Beef \rightarrow Burger
 $$
 
 * Missing y type
 
 ``` haskell
-\x: Bread. \y: ??? \z: Bread. b
+((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ---
 
-## Formulation
+## Let's start from something vague
 
-* What kind of information do we have ?
---
-
-* An environment $\Gamma$ is the things we have already known. Mapping term to type
-
-$$ \Gamma : x \rightarrow Bread, z \rightarrow Bread, b \rightarrow Burger $$
---
-
-* A lambda expression, or parsed abstract syntax tree.
-
---
-
-* We don't know the "type" of the missing part, using a "type variable" to represent it.
---
-
-* Caveat: the type variable doesn't incorporate the "arrow" for "Abstraction", we need it to expand the "type variable" to have the same structure.
-
----
-
-![slc-ex1](image/slc_ex1.svg)
-
----
-
-## Formulation: Type variable expansion
-
-* The "type variable" we are talking about is actually "meta type variable", used for the real "type variable" expansion.
-
-* Rule for generating type variable expansion in type inference.
-
-$$ 
-\rho ::= \tau \\\
-\tau ::= \tau \rightarrow \tau \vert T \\\
-$$
+* We would like to have a `typecheck` function, when given a value level `Term` expression, return a inferred `Rho` type. And since the inference involves some states, we have to put it in a Monad `Tc`.
+* `typecheck` calls `inferRho` to states its implementation.
 
 ``` haskell
-type Rho   = Type
-type Tau   = Type
-
-data Type = Fun    Type Type ›    -- Function type
-    ›     | TyCon  TyCon      ›   -- Type constants
-    ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
-
-data TyVar
-  = SkolemTv String Uniq›   -- A skolem constant; the String is•
+typecheck :: Term -> Tc Rho
+typecheck e = inferRho e
 ```
 
-* Here the "Type" is the "meta type variable" we are talking about.
-* Now we make the type level structure matches the value level structure. Then what we have to do is to collect constraints, and "unify" them.
+* We allocate a type variable, put it into another box stating that we are in the inference phase.
+* After the `tcRho` finished, we read its inferred type stored in `ref`
 
+``` haskell
+inferRho :: Term -> Tc Rho
+inferRho expr
+  = do { ref <- newTcRef (error "inferRho: empty result")
+       ; tcRho expr (Infer ref)
+       ; readTcRef ref }
+```
+* Then what's our target?
 
 ---
 
-## What is unification ?
+## Target: Reformulate our problem
+
+* The essense of type inference is walking the abstract syntax tree and collect constraints we must satisfy. Therefore we would reformulate the problem to so-called "unification problem".
+
+--
+
+* Unification problem example
+
+$$
+T_1 \rightarrow T_1 * bool = (T_3 + int) \rightarrow T_2
+$$
+
+--
+
+* Then we have a solution 
+
+$$ \\{ T_1 \Rightarrow T_3 + int, T_2 \Rightarrow (T_3 + int) * bool \\} $$
+
+--
+
+* Our target is to collect Constraints
+
+``` haskell
+a -> b -> c = Bread -> Beef -> Burger
+a = Bread
+c = Burger
+```
+
+--
+* Then solving this contraint giving us `b = Beef`
+
+---
+
+## Unification problem
+
+* In academic language, we could describe Unification problem like following.
+
+--
 
 * A set of equations, with a definition of what is equal (equivalence relation in mathematical terminology)
 
@@ -212,96 +220,88 @@ $$ a \\{ x \rightarrow a \\}  =  x \\{ x \rightarrow a \\} $$
 
 * The substitution is called unifier
 
----
-
-## Unification 
-
-* Example
-
-$$
-T_1 \rightarrow T_1 * bool = (T_3 + int) \rightarrow T_2
-$$
-
-* Then we have a solution 
-
-$$ \\{ T_1 \rightarrow T_3 + int, T_2 \rightarrow (T_3 + int) * bool \\} $$
 
 ---
 
-## Problem Reformulation of Type inference
+## Formulation: Type variable expansion
 
-* Walk the tree and collect the type constaints, then these constraints collectively formulate a unification problem
-* Solve the unification problem with Robinson's unification algorithm
---
-
-$$
-unify ( \Phi ) = \Phi \\\
-unify ( \\{ C = C \\} \cup E ) = unify (E)  \\\
-unify ( \\{ C_1 = C_2 \\} \cup E ) = error \\\
-unify ( \\{ T = T \\} \cup E) = unify(E) \\\
-unify ( \\{ T = \tau \\} \cup E) = unify(\\{ \tau = T \\} \cup E)  \\\
-unify ( \\{ \tau_1 \rightarrow \tau_2 = \tau_1^{\prime} \rightarrow \tau_2^{\prime} \\} \cup E ) = uify ( \\{ \tau_1 = \tau_1^{\prime}, \tau_2 = \tau_2^{\prime} \\} \cup E)  \\\
-unify ( \\{ \tau = \tau^{\prime} \cup E \\}) = error
-$$
-
----
-
-## Robinson's Unification Algorithm
+* But notice that we don't have "type variable" either in the syntax or parsed abstract syntax tree.
 
 ``` haskell
-unify :: Tau -> Tau -> Tc ()
-
-unify ty1 ty2•
-  | badType ty1 || badType ty2  -- Compiler error
-  = failTc (text "Panic! Unexpected types in unification:" <+>•
-            vcat [ppr ty1, ppr ty2])
-
-unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2 = return ()
-unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
-unify (MetaTv tv) ty = unifyVar tv ty
-unify ty (MetaTv tv) = unifyVar tv ty
-
-unify (Fun arg1 res1)
-      (Fun arg2 res2)
-  = do { unify arg1 arg2; unify res1 res2 }
-
-unify (TyCon tc1) (TyCon tc2)•
-  | tc1 == tc2•
-  = return ()
-
-unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
+((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
+--
+
+* We have to figure out a way to generate the "type variables". Or in more complicated form with arrow (->), to make it a type expression.
+
+--
+
+* Grammar for generating type variable expansion in type inference. With this grammar, we have the "meta type variable" for generating type expressions. 
+
+$$ 
+\rho ::= \tau \\\
+\tau ::= \tau \rightarrow \tau \vert T \\\
+$$
+
+* That is the `Rho` we mentioned.
+
+``` haskell
+inferRho :: Term -> Tc Rho
+```
+
+---
+## Formulation: Type variable expansion
+
+$$ 
+\rho ::= \tau \\\
+\tau ::= \tau \rightarrow \tau \vert T \\\
+$$
+
+* And now we have the "type expression" defined.
+
+``` haskell
+type Rho   = Type
+type Tau   = Type
+
+data Type = Fun    Type Type ›    -- Function type
+    ›     | TyCon  TyCon      ›   -- Type constants
+    ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
+
+data TyVar
+  = SkolemTv String Uniq›   -- A skolem constant; the String is•
+```
 
 ---
 
+## Tree Walking
 
 ``` haskell
-unifyVar :: MetaTv -> Tau -> Tc ()
--- Invariant: tv1 is a flexible type variable
-unifyVar tv1 ty2        -- Check whether tv1 is bound
-  = do { mb_ty1 <- readTv tv1•••
-       ; case mb_ty1 of
-           Just ty1 -> unify ty1 ty2
-           Nothing  -> unifyUnboundVar tv1 ty2 }
+inferRho expr
+  = do { ref <- newTcRef (error "inferRho: empty result")
+       ; tcRho expr (Infer ref)
+       ; readTcRef ref }
+```
 
-unifyUnboundVar :: MetaTv -> Tau -> Tc ()
--- Invariant: the flexible type variable tv1 is not bound
-unifyUnboundVar tv1 ty2@(MetaTv tv2)
-  = do { -- We know that tv1 /= tv2 (else the•
-         -- top case in unify would catch it)
-         mb_ty2 <- readTv tv2
-       ; case mb_ty2 of
-           Just ty2' -> unify (MetaTv tv1) ty2'
-           Nothing  -> writeTv tv1 ty2 }•
+![slc-ex1](image/slc_ex1.svg)
 
-unifyUnboundVar tv1 ty2
-  = do { tvs2 <- getMetaTyVars [ty2]
-       ; if tv1 `elem` tvs2 then
-            occursCheckErr tv1 ty2
-         else
-            writeTv tv1 ty2 }
+---
 
+## Tree Walking
+
+``` haskell
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; ....
+       }
+```
+
+* Wait.. What is `unifyFun` ?
+
+![slc-ex1](image/slc_ex1.svg)
+
+``` haskell
 unifyFun :: Rho -> Tc (Sigma, Rho)
 --      (arg,res) <- unifyFunTy fun
 -- unifies 'fun' with '(arg -> res)'
@@ -312,81 +312,148 @@ unifyFun tau           = do { arg_ty <- newTyVarTy
                             ; return (arg_ty, res_ty) }
 ```
 
+---
+
+## Robinson's Unification Algorithm in Action
+
+* `unify` the symbol `tau` with the formula of `a1 -> a2`
+* That is, Contraint $\tau = a1 \rightarrow a2$
+* We allocate type variables with `newTyVarTy`
+
+``` haskell
+unifyFun :: Rho -> Tc (Rho, Rho)
+unifyFun (Fun arg res) = return (arg,res)
+unifyFun tau           = do { arg_ty <- newTyVarTy
+                            ; res_ty <- newTyVarTy
+                            ; unify tau (arg_ty --> res_ty)
+                            ; return (arg_ty, res_ty) }
+```
 
 ---
 
-## Back to Inference Example
+## Robinson's Unification Algorithm in Action
+
+* If the argument is `Fun`, then first `unify` the argument, then `unify` its body.
 
 ``` haskell
-\x: Bread. \y: ??? \z: Bread. b
+unify :: Tau -> Tau -> Tc ()
+unify (Fun arg1 res1)
+      (Fun arg2 res2)
+  = do { unify arg1 arg2; unify res1 res2 }
 ```
 
-* We have the constraints collected as the following.
+--
+
+* If the type is `badType`, then indicate it is a compilation error.
 
 ``` haskell
-a -> b -> c -> d = Bread -> Meat -> Bread -> Burger
-a = Bread
-c = Bread
-d = Burger
+unify ty1 ty2
+  | badType ty1 || badType ty2  -- Compiler error
+  = failTc (text "Panic! Unexpected types in unification:" <+>
+            vcat [ppr ty1, ppr ty2])
 ```
 
-* Solving this gives us a unifier
+--
+
+* If it is a constant type, then check if they are matched.
 
 ``` haskell
-a = Bread
-b = Meat
-c = Bread
-d = Burger
+unify (TyCon tc1) (TyCon tc2)•
+  | tc1 == tc2•
+  = return ()
 ```
-
 
 ---
 
-## Jotting it down into code
-
-* Then the typechecking is just allocating.
+## Robinson's Unification Algorithm in Action
 
 ``` haskell
-typecheck :: Term -> Tc Rho
-typecheck e = do { ty <- inferRho e }
+unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2 = return ()
+```
+--
 
-inferRho :: Term -> Tc Rho
-inferRho expr•
+* Otherwise, failed to check the program.
+
+``` haskell
+unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
+```
+
+--
+
+* With unification algorithm, we could get back to the tree walking.
+
+---
+
+![slc-ex1](image/slc_ex1.svg)
+
+``` haskell
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkRho arg arg_ty
+       ; instRho res_ty exp_ty }
+
+checkRho :: Term -> Rho -> Tc ()
+checkRho expr ty = tcRho expr (Check ty)
+
+instRho :: Rho -> Expected Rho -> Tc ()
+instRho t1 (Check t2) = unify t1 t1
+instRho t1 (Infer r) = writeTcRef r t1
+```
+
+---
+
+![slc-ex1](image/slc_ex1.svg)
+
+``` haskell
+tcRho (Lam var body) (Infer ref)
+  = do { var_ty  <- newTyVarTy
+       ; body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+tcRho (Lam var body) (Check exp_ty)
+  = do { (var_ty, body_ty) <- unifyFun exp_ty•
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+```
+*  `extendVarEnv` put a record marking a term's type as Rho, for the lookup afterward.
+
+---
+
+![slc-ex1](image/slc_ex1.svg)
+
+``` haskell
+tcRho (Var v) exp_ty•
+  = do { v_rho <- lookupVar v•
+       ; instRho v_rho exp_ty }
+```
+
+* `lookupVar` lookup a Term's type by checking if the record exists.
+
+---
+
+![slc-ex1](image/slc_ex1.svg)
+
+``` haskell
+tcRho (Lit _) exp_ty
+  = instRho BurgerType exp_ty
+```
+
+* Constant type is trivial.
+
+---
+
+## Tree Walking
+
+* After tree walking, we should get the type of the the whole expression
+
+``` haskell
+inferRho expr
   = do { ref <- newTcRef (error "inferRho: empty result")
        ; tcRho expr (Infer ref)
        ; readTcRef ref }
 ```
 
----
-
-``` haskell
-tcRho :: Term -> Expected Rho -> Tc ()
--- Invariant: if the second argument is (Check rho),
--- ›      then rho is in weak-prenex form
-
-tcRho (Lam var body) (Check exp_ty)
-  = do { (var_ty, body_ty) <- unifyFun exp_ty•
-       ; extendVarEnv var var_ty (checkRho body body_ty) }
-
-tcRho (Lam var body) (Infer ref)
-  = do { var_ty  <- newTyVarTy
-       ; body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
-
-tcRho (Lit _) exp_ty
-  = instSigma intType exp_ty
-
-tcRho (Var v) exp_ty•
-  = do { v_sigma <- lookupVar v•
-       ; instSigma v_sigma exp_ty }
-
-tcRho (App fun arg) exp_ty
-  = do { fun_ty <- inferRho fun
-       ; (arg_ty, res_ty) <- unifyFun fun_ty
-       ; checkSigma arg arg_ty
-       ; instSigma res_ty exp_ty }
-```
-
+--
+* However, this type system is too simple. No generalization.
 
 ---
 
@@ -395,31 +462,29 @@ tcRho (App fun arg) exp_ty
 * Suppose that we would like to have a generalized version of hamburger making.
 * Hamburger is not only for meat, but could be fish. And we could use Rice for Bread
 
-```
-(\f -> ((f bread meat bread), (f bread fish bread), (f rice meat rice)) ) (make)
+``` haskell
+(\f -> ((f bread meat), (f bread fish), (f rice meat)) ) (make)
 ```
 
-* The trick discovered by Hindley and Milner independently is to add a "let"
+* The trick discovered by Hindley and Milner independently is to add a "let" into grammar
 * It's called Let polymorphism.
 
-```
-let f = make in ((f bread meat bread), (f bread fish bread), (f rice meat rice))
+``` haskell
+let f = make in ((f bread meat), (f bread fish), (f rice meat))
 ```
 
-* The type system is also generalized. For the language to describe "type" is added by "forall"
-```
-forall a b c. a -> b -> c -> Burger
+* The type system is also generalized. For the language to describe "type" (type expression) is added with polytype, that is `forall a. a`
+
+``` haskell
+forall a b. a -> b -> Burger
 ```
 
 
 ---
 
-## Let Polymorphism (Extension of Simly-Typed)
+## Let Polymorphism
 
-$$ 
-\rho ::= \tau \\\
-\tau::= \tau \rightarrow \tau| T \\\
-$$
+* First of all, we modified the grammar for value level expression.
 
 ``` haskell
 data Term = Var Name              -- x
@@ -432,11 +497,19 @@ data Term = Var Name              -- x
 
 * We add a "Let Name Term Term" here
 * Polytypes (We use Sigma here) are types containing variables bound by one or more for-all quantifiers
-* The inference algorithm is with the same workflow, with unification algorithm extended.
+* Then we extend the structure we previously defined one by one.
 
 ---
 
-## Type-level structure
+## Let Polymorphism
+
+* Then we extends the type expression.
+
+$$ 
+\sigma := \forall a. \rho \\\
+\rho ::= \tau \\\
+\tau::= \tau \rightarrow \tau| T \\\
+$$
 
 * We add another meta variable "Sigma" for type level expansion.
 * And "BoundTv" to capture the "forall" polytype.
@@ -457,12 +530,18 @@ data TyVar
   | SkolemTv String Uniq›   -- A skolem constant; the String is•
 ```
 
+
 ---
 
 ## Instantiation
 
 * With the polytype introduced, an acompanying concept is introduced, it's called instantiation.
+
+--
+
 * It's replacing "type variable" identified by "schema" with fresh "type variable"
+
+--
 
 * The left hand side could instantiate the right hand side.
 
@@ -473,14 +552,20 @@ a \rightarrow a \leq b \rightarrow b \\\
 \forall a. a \rightarrow a \leq c \rightarrow c \\\
 $$
 
+--
+
 * How do we tell if one of the polytype could subsume another?
+
+--
+
 * Skolemise one of the polytype, and see if the other polytype could instantiate it after skolemization.
+
 
 ---
 
 ## Instantiation
 
-* In Haskell
+* Substitute the type variable appears in `forall`, with newly instantiated type variables, they are not the same from any other type variables.
 
 ``` haskell
 instSigma :: Sigma -> Expected Rho -> Tc ()
@@ -529,10 +614,22 @@ checkSigma expr sigma
              (text "Type not polymorphic enough") }
 ```
 
+
 ---
 
+![slc-ex1](image/slc_ex1.svg)
 
-## Inference: Generalization
+``` haskell
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkSigma arg arg_ty
+       ; instSigma res_ty exp_ty }
+```
+
+---
+
+![slc-ex1](image/slc_ex1.svg)
 
 ``` haskell
 tcRho (Let var rhs body) exp_ty
@@ -542,24 +639,72 @@ tcRho (Let var rhs body) exp_ty
 
 ---
 
-## Inference: Instantiation
+![slc-ex1](image/slc_ex1.svg)
 
 ``` haskell
 tcRho (Lit _) exp_ty
   = instSigma intType exp_ty
+```
 
+---
+
+![slc-ex1](image/slc_ex1.svg)
+
+``` haskell
 tcRho (Var v) exp_ty•
   = do { v_sigma <- lookupVar v•
        ; instSigma v_sigma exp_ty }
 
-tcRho (App fun arg) exp_ty
-  = do { fun_ty <- inferRho fun
-       ; (arg_ty, res_ty) <- unifyFun fun_ty
-       ; checkSigma arg arg_ty
-       ; instSigma res_ty exp_ty }
 tcRho (Ann body ann_ty) exp_ty
    = do { checkSigma body ann_ty
         ; instSigma ann_ty exp_ty }
+```
+
+
+---
+
+
+## Change in Unification
+
+``` haskell
+unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
+unify (MetaTv tv) ty = unifyVar tv ty
+unify ty (MetaTv tv) = unifyVar tv ty
+```
+
+--
+
+``` haskell
+unifyVar :: MetaTv -> Tau -> Tc ()
+-- Invariant: tv1 is a flexible type variable
+unifyVar tv1 ty2        -- Check whether tv1 is bound
+  = do { mb_ty1 <- readTv tv1•••
+       ; case mb_ty1 of
+           Just ty1 -> unify ty1 ty2
+           Nothing  -> unifyUnboundVar tv1 ty2 }
+```
+
+---
+
+## Change in Unification
+
+``` haskell
+unifyUnboundVar :: MetaTv -> Tau -> Tc ()
+-- Invariant: the flexible type variable tv1 is not bound
+unifyUnboundVar tv1 ty2@(MetaTv tv2)
+  = do { -- We know that tv1 /= tv2 (else the•
+         -- top case in unify would catch it)
+         mb_ty2 <- readTv tv2
+       ; case mb_ty2 of
+           Just ty2' -> unify (MetaTv tv1) ty2'
+           Nothing  -> writeTv tv1 ty2 }•
+
+unifyUnboundVar tv1 ty2
+  = do { tvs2 <- getMetaTyVars [ty2]
+       ; if tv1 `elem` tvs2 then
+            occursCheckErr tv1 ty2
+         else
+            writeTv tv1 ty2 }
 ```
 
 
@@ -579,9 +724,11 @@ let f2 = λx. if b then f1 else λy.x y in
 let fn = λx. if b then fn−1 else λy.x y in
 ```
 
-* reference would break the type system's soundness
+* Reference type would break the type system's soundness
 
-* Even with the addition of "let", it only tells us to "generalize" at the syntax where "let" happened.
+--
+* But we are going to stres on the last one, which is solvable by higher-rank type system
+* Even with the addition of "let", it only tells the system to "generalize" at the syntax where "let" happened.
 
 ```haskell
 (\f -> (f "foo", f 13)) (\x -> x)
@@ -596,14 +743,13 @@ let fn = λx. if b then fn−1 else λy.x y in
 * Consider the following use case.
 
 ```haskell
-make :: (forall a. a -> a) -> a -> b -> c -> (a, b, c)
-make= undefined
+make :: (forall a. a -> a) -> a -> b -> Burger
 
-make2burgs :: (forall a. a -> a) -> (6Pound, 9Pound)
-make2burgs g = let f x = (x bread meat bread, x bread fish bread)
-               in f g
+makeBurgers :: (forall a. a -> a) -> (Burger, Burger)
+makeBburgers g = let f x = (x bread beef, x bread fish)
+                 in f g
 
-make2burgs make
+makeBurgers make
 ```
 
 * We add a type annotation to help the type system to generalize at the argument, without a big change in hindley-milner type system.
