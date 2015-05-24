@@ -757,15 +757,9 @@ makeBurgers make
 
 ---
 
-## Higher-rank type system
+## Change in Value and Type Expression
 
 * Add type annotation in the abstraction rule, i.e. ALam
-
-
-$$ 
-\rho ::= \tau | \sigma \rightarrow \sigma^{\prime} \\\
-\tau::= \tau \rightarrow \tau| T \\\
-$$
 
 ``` haskell
 data Term = Var Name              -- x
@@ -777,11 +771,41 @@ data Term = Var Name              -- x
           | Ann Term Sigma        -- (f x) :: Int
 ```
 
+--
+
+* Make $\rho$ could derive $\sigma \rightarrow \sigma$
+$$ 
+\rho ::= \tau | \sigma \rightarrow \sigma^{\prime} \\\
+\tau::= \tau \rightarrow \tau| T \\\
+$$
+
+
+---
+
+## Change in Inference
+
+``` haskell
+tcRho (ALam var var_ty body) (Check exp_ty)
+  = do { (arg_ty, body_ty) <- unifyFun exp_ty•
+       ; subsCheck arg_ty var_ty
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+
+tcRho (ALam var var_ty body) (Infer ref)
+  = do { body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+```
+
+--
+* What is `subsCheck` ?
+
+
 ---
 
 ## Subsumption
 
-* The type without the hindley milner
+* A trick to make different poly type expression be equivalent.
+
+--
 
 * With the type annotation added, the type derived from hindley milner.
 $$
@@ -804,9 +828,11 @@ $$
 
 ## Subsumption
 
-* prenex form: With all of the "forall" at the "head" of the type annotation.
+* We define the prenex form: With all of the "forall" at the "head" of the type annotation.
 
-* prenex conversion
+--
+
+* And the prenex conversion is like the following
 
 $$
 \forall a. a \rightarrow (\forall b.b \rightarrow b)
@@ -818,12 +844,17 @@ $$
 \forall ab. a \rightarrow b \rightarrow b
 $$
 
+--
 * It's sometimes called Skolemization.
 
+--
+* The technique is to convert the annotated type expression into prenex form and see if one is more generalized than the other.
 
 ---
 
 ## Skolemization
+
+* Recursivelly floating out the `Forall`
 
 ``` haskell
 skolemise :: Sigma -> Tc ([TyVar], Rho)
@@ -840,16 +871,14 @@ skolemise ty ›  ›   ›   -- Rule PRMONO
   = return ([], ty)
 ```
 
-
 ---
 
-## Subsumption in code
+## Subsumption
+
+* It check if `sigma2` is at least as polymorphic as `sigma1 -> exp`
 
 ``` haskell
 subsCheck :: Sigma -> Sigma -> Tc ()
--- (subsCheck args off exp) checks that•
---     'off' is at least as polymorphic as 'args -> exp'
-
 subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
   = do { (skol_tvs, rho2) <- skolemise sigma2
        ; subsCheckRho sigma1 rho2
@@ -860,49 +889,27 @@ subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
                       nest 2 (ppr sigma1),
                       text "is not as polymorphic as",
                       nest 2 (ppr sigma2)])
-    }
 ```
-
 
 ---
 
-## Subsumption in code
+## Subsumption
+
+* `rho2` is in prenex form
 
 ``` haskell
-
 subsCheckRho :: Sigma -> Rho -> Tc ()
--- Invariant: the second argument is in weak-prenex form
-
 subsCheckRho sigma1@(ForAll _ _) rho2›   -- Rule SPEC
   = do { rho1 <- instantiate sigma1
        ; subsCheckRho rho1 rho2 }
-
 subsCheckRho rho1 (Fun a2 r2)            -- Rule FUN
   = do { (a1,r1) <- unifyFun rho1; subsCheckFun a1 r1 a2 r2 }
-
 subsCheckRho (Fun a1 r1) rho2            -- Rule FUN
   = do { (a2,r2) <- unifyFun rho2; subsCheckFun a1 r1 a2 r2 }
-
 subsCheckRho tau1 tau2                   -- Rule MONO
   = unify tau1 tau2    -- Revert to ordinary unification
 
 subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
-```
-
-
----
-
-## Put all of the extensions together
-
-``` haskell
-tcRho (ALam var var_ty body) (Check exp_ty)
-  = do { (arg_ty, body_ty) <- unifyFun exp_ty•
-       ; subsCheck arg_ty var_ty
-       ; extendVarEnv var var_ty (checkRho body body_ty) }
-
-tcRho (ALam var var_ty body) (Infer ref)
-  = do { body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
 ```
 
 ---
