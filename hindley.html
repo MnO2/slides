@@ -283,7 +283,7 @@ inferRho expr
        ; readTcRef ref }
 ```
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex5](image/SLC_ex1.svg)
 
 ---
 
@@ -299,7 +299,7 @@ tcRho (App fun arg) exp_ty
 
 * Wait.. What is `unifyFun` ?
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex6](image/SLC_ex2.svg)
 
 ``` haskell
 unifyFun :: Rho -> Tc (Sigma, Rho)
@@ -384,7 +384,27 @@ unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex3](image/SLC_ex2.svg)
+
+``` haskell
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkRho arg arg_ty
+       ; instRho res_ty exp_ty }
+
+checkRho :: Term -> Rho -> Tc ()
+checkRho expr ty = tcRho expr (Check ty)
+
+instRho :: Rho -> Expected Rho -> Tc ()
+instRho t1 (Check t2) = unify t1 t1
+instRho t1 (Infer r) = writeTcRef r t1
+```
+
+
+---
+
+![slc-ex3](image/SLC_ex3.svg)
 
 ``` haskell
 tcRho (App fun arg) exp_ty
@@ -403,7 +423,7 @@ instRho t1 (Infer r) = writeTcRef r t1
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex4](image/SLC_ex4.svg)
 
 ``` haskell
 tcRho (Lam var body) (Infer ref)
@@ -418,7 +438,7 @@ tcRho (Lam var body) (Check exp_ty)
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex6](image/SLC_ex5.svg)
 
 ``` haskell
 tcRho (Var v) exp_ty•
@@ -430,7 +450,15 @@ tcRho (Var v) exp_ty•
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex6](image/SLC_ex6.svg)
+
+---
+
+![slc-ex6](image/SLC_ex7.svg)
+
+---
+
+![slc-ex6](image/SLC_ex8.svg)
 
 ``` haskell
 tcRho (Lit _) exp_ty
@@ -439,6 +467,27 @@ tcRho (Lit _) exp_ty
 
 * Constant type is trivial.
 
+---
+
+![slc-ex6](image/SLC_ex9.svg)
+
+``` haskell
+tcrho (lit _) exp_ty
+  = instrho burgertype exp_ty
+```
+
+* constant type is trivial.
+
+---
+
+![slc-ex6](image/SLC_ex10.svg)
+
+``` haskell
+tcrho (lit _) exp_ty
+  = instrho burgertype exp_ty
+```
+
+* constant type is trivial.
 ---
 
 ## Tree Walking
@@ -617,19 +666,7 @@ checkSigma expr sigma
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
-
-``` haskell
-tcRho (App fun arg) exp_ty
-  = do { fun_ty <- inferRho fun
-       ; (arg_ty, res_ty) <- unifyFun fun_ty
-       ; checkSigma arg arg_ty
-       ; instSigma res_ty exp_ty }
-```
-
----
-
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex6](image/let_ex2.svg)
 
 ``` haskell
 tcRho (Let var rhs body) exp_ty
@@ -639,7 +676,20 @@ tcRho (Let var rhs body) exp_ty
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex6](image/let_ex13.svg)
+
+``` haskell
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkSigma arg arg_ty
+       ; instSigma res_ty exp_ty }
+```
+
+
+---
+
+![slc-ex6](image/let_ex1.svg)
 
 ``` haskell
 tcRho (Lit _) exp_ty
@@ -648,7 +698,7 @@ tcRho (Lit _) exp_ty
 
 ---
 
-![slc-ex1](image/slc_ex1.svg)
+![slc-ex6](image/let_ex1.svg)
 
 ``` haskell
 tcRho (Var v) exp_ty•
