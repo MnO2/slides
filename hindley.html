@@ -21,6 +21,11 @@
       .blue   { color: #41C8F0; }
       .yellow { color: #DBEC62; }
       .large p { font-size: 4em; }
+
+      .large-picture img { width: 400px; }
+      .medium-picture img { width: 300px; }
+      .small-picture img { width: 200px; }
+      .tiny-picture img { width: 100px; }
     </style>
   </head>
   <body>
@@ -30,18 +35,18 @@ class: center, middle
 
 # Hindley Milner Type System
 
-![h-and-m](image/HM.png)
 
 ### Paul Meng
+### Twitch, June 3rd, 2015.
 
 ---
 
-## What part of types don't you understand
+## ![h-and-m](image/HM.png) T-shirt
 
-![what-part](image/what_part_of_types_dont_you_understand.jpg)
+.large-picture[![what-part](image/what_part_of_types_dont_you_understand.jpg)]
 --
 
-![wtf](image/jackie-chan-wtf.png)
+.small-picture[![wtf](image/jackie-chan-wtf.png)]
 
 
 ---
@@ -49,28 +54,112 @@ class: center, middle
 
 ## Hindley Milner Type Rules
 
-![syntax-directed-hm](image/syntax_directed_hm.jpg)
+.large-picture[![syntax-directed-hm](image/syntax_directed_hm.jpg)]
 
-* It's quite daunting at first glance, and you just can't understand any single bit of it if you are not from a similar background.
+* It's quite daunting at first glance, and you just can't understand any single bit of it if you are not from academic background.
 
 ---
 
 ## Why is it so hard ?
 
-* The language (predicate logic) used to describe it is the language used in academy. The purpose is to be exact but not for comprehension.
---
-
+* .red[The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.]
 * Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
---
-
 * Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
---
-
 * You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
-  - Haskell's type system is much more complicated. But as a ML family member, it is quite similar.
---
+  - Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell
+* It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+  - It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.
 
-* It's unclear why do we need it? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.
+* .red[Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.]
+* Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
+* You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
+  - Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell
+* It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+  - It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.
+
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.
+* Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
+* .red[Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)]
+* You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
+  - Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell
+* It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+  - It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.
+* Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
+* Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
+* .red[You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?]
+  - Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell
+* It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+  - It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.
+* Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
+* Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
+* You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
+  - .red[Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell]
+* It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+  - It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.
+* Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
+* Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
+* You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
+  - Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell
+* .red[It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?]
+  - It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.
+
+---
+
+## Why is it so hard ?
+
+* The language (predicate logic) used to describe the system is the language used in academy. The purpose is to be exact but not for comprehension.
+* Academic people just use lots of jargon in communication for brevity. As a newcomer you have to pickup the intuition and jargon.
+* Sometimes the form you see is not the form where you could read out an algorithm. (Not syntax-directed form)
+* You don't understand why it has to be in a simplified formal language when it comes to a tutorial. What it has to do with Haskell? Can I just learn the model for the real world Haskell?
+  - Haskell's type system is much more complicated. but as a ML family member, it is possible to extend the simplified formal language to the complexity of Haskell
+* It's unclear why we need Hindley Milner type system? What's the motivation for the researcher developed such kind of system. We just accepted it as a part of the programming language?
+  - .red[It is based on solid researches on lambda calculus, and it inspired lots of extensions and new models ever since. Although with its defect, it is good to learn that to get the idea of similar models in the family.]
+
+---
+
+## Using predicate logic as lightly as possible
+
+* .red[This talk tries to derive it from intuition and examples.]
+* Trade off exactnesss for easier comprehension.
+* We would define the simplified one and gradually move to the harder ones.
+
+---
+
+## Using predicate logic as lightly as possible
+
+* This talk tries to derive it from intuition and examples.
+* .red[Trade off exactnesss for easier comprehension.]
+* We would define the simplified one and gradually move to the harder ones.
+
 
 ---
 
@@ -78,41 +167,64 @@ class: center, middle
 
 * This talk tries to derive it from intuition and examples.
 * Trade off exactnesss for easier comprehension.
-* We would define the simplified one and gradually move to the harder ones.
-
+* .red[We would define the simplified one and gradually move to the harder ones.]
 
 ---
 
 ## Starting off with an observation
 
 * In McDonald, a simple burger is consist of breads and beef.
-* Let's "formulate" this observation with a simple language
+
+.tiny-picture[![](image/big-mac-bread.jpg)]
+.tiny-picture[![](image/big-mac-beef.jpg)]
+
+* How could we express that we would like to "make" a burger?
+
+---
+
+## Starting off with an observation
+
+* We could express it in a simplified formal language.
 
 ``` haskell
 data Term = Var Name              -- x
           | Lit Int               -- 3
           | App Term Term         -- f x
           | Lam Name Term         -- \x -> x
-          | Ann Term Rho          -- (f x) :: Int
 ```
 
-* I would really love to call this language as "System Mc", but that is actually a misnomer. It's called lambda calculus.
-* Of course anyone could see this it is unsafe. You could put anything into the x, y and makes it a burger. (Cockroach?)
+--
+* I would really love to call this language as .blue["System Mc"], but that is actually a misnomer. Its name is .blue[lambda calculus].
+* Then "make" could be expressed as
+
+--
+
+![](image/burger_lambda.jpg)
 
 ``` haskell
 (\x -> \y -> burger) bread beef
 ```
 
+--
+* Is unsafe. You could put anything into the x, y and makes it a burger. (Cockroach?)
+
 ---
 
 ## Simply typed lambda calculus
 
-* Therefore we extend this language, to add types.
+* Therefore we extend this language, to add type annotation: .blue[x :: Burger] 
 
-* Given a built-in rule (We, the programmer as the oracle, declare this as the Hamburger theorem.)
+``` haskell
+data Term = Var Name              -- x
+          | Lit Int               -- 3
+          | App Term Term         -- f x
+          | Lam Name Term         -- \x -> x
+          | Ann Term Rho          -- (f x) :: Burger
+```
+* Given a built-in rule (We, the programmer as the oracle, declare this as the Hamburger Making theorem.)
 
 $$
-Bread \rightarrow Beef \rightarrow Burger
+make :: Bread \rightarrow Beef \rightarrow Burger
 $$
 
 * Then we could check if this program follows the rule of the theorem.
