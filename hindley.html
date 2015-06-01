@@ -230,7 +230,7 @@ $$
 * Then we could check if this program follows the rule of the theorem.
 
 ``` haskell
-(\x: Bread -> \y: Beef -> burger) bread beef
+((\x: Bread -> \y: Beef -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 
@@ -243,7 +243,7 @@ $$
 
 * Rule:
 $$
-Bread \rightarrow Beef \rightarrow Burger
+make :: Bread \rightarrow Beef \rightarrow Burger
 $$
 
 * Missing y type
@@ -254,9 +254,9 @@ $$
 
 ---
 
-## Let's start from something vague
+## Let's get started from fuzzy idea
 
-* We would like to have a `typecheck` function, when given a value level `Term` expression, return a inferred `Rho` type. And since the inference involves some states, we have to put it in a Monad `Tc`.
+* We would like to have a `typecheck` function, when given a value level `Term` expression, return an inferred `Rho` type. And since the inference involves some states, we have to put it in a Monad `Tc`.
 * `typecheck` calls `inferRho` to states its implementation.
 
 ``` haskell
@@ -264,8 +264,9 @@ typecheck :: Term -> Tc Rho
 typecheck e = inferRho e
 ```
 
-* We allocate a type variable, put it into another box stating that we are in the inference phase.
-* After the `tcRho` finished, we read its inferred type stored in `ref`
+--
+
+* We allocate a "type variable", and leave the `tcRho` to fill out the type variable and read it afterward. We also put it in another type to mark that we are doing "inference".
 
 ``` haskell
 inferRho :: Term -> Tc Rho
@@ -274,15 +275,34 @@ inferRho expr
        ; tcRho expr (Infer ref)
        ; readTcRef ref }
 ```
-* Then what's our target?
+* Then what's next and our goal?
 
 ---
 
 ## Target: Reformulate our problem
 
-* The essense of type inference is walking the abstract syntax tree and collect constraints we must satisfy. Therefore we would reformulate the problem to so-called "unification problem".
+
+* Notice that we could write down some equations when seeing the formula. Then we could solve the eqautions like high-school algebra.
+
+``` haskell
+((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+```
+
+``` haskell
+a -> b -> c = Bread -> Beef -> Burger
+a = Bread
+c = Burger
+```
+
+* Is this observation correct? 
 
 --
+
+* .blue[Yes.] The essense of type inference is walking the abstract syntax tree and collect constraints we must satisfy. Therefore we would reformulate the problem to so-called "unification problem".
+
+---
+
+## Target: Reformulate our problem
 
 * Unification problem example
 
@@ -294,11 +314,11 @@ $$
 
 * Then we have a solution 
 
-$$ \\{ T_1 \Rightarrow T_3 + int, T_2 \Rightarrow (T_3 + int) * bool \\} $$
+$$ \\{ T_1 \Rightarrow T_3 + int, \, T_2 \Rightarrow (T_3 + int) * bool \\} $$
 
 --
 
-* Our target is to collect Constraints
+* Our target is to walk the tree and collect Constraints
 
 ``` haskell
 a -> b -> c = Bread -> Beef -> Burger
@@ -306,31 +326,11 @@ a = Bread
 c = Burger
 ```
 
---
-* Then solving this contraint giving us `b = Beef`
-
----
-
-## Unification problem
-
-* In academic language, we could describe Unification problem like following.
+* Then solving the equations gives us `b = Beef`
 
 --
 
-* A set of equations, with a definition of what is equal (equivalence relation in mathematical terminology)
-
-$$ \\{ a = x \\} $$
-
-
-* A substitution 
-
-$$ \\{ x \rightarrow a \\} $$
-
-* And after applying the substitution, both sides of the equation are equal
-
-$$ a \\{ x \rightarrow a \\}  =  x \\{ x \rightarrow a \\} $$
-
-* The substitution is called unifier
+* We call this substitution "unifier" in academic terminology.
 
 
 ---
@@ -345,17 +345,18 @@ $$ a \\{ x \rightarrow a \\}  =  x \\{ x \rightarrow a \\} $$
 
 --
 
-* We have to figure out a way to generate the "type variables". Or in more complicated form with arrow (->), to make it a type expression.
+* We have to figure out a way to generate the "type variables". In more complicated cases it also comes with arrow (->), and it makes up a "type expression".
 
 --
 
-* Grammar for generating type variable expansion in type inference. With this grammar, we have the "meta type variable" for generating type expressions. 
+* Grammar for type variable expansion in type inference.
 
-$$ 
+$$
 \rho ::= \tau \\\
-\tau ::= \tau \rightarrow \tau \vert T \\\
+\tau ::= \tau \rightarrow \tau \, \vert \, ContantType \\\
 $$
 
+* With this grammar, we have the "meta type variable" for expanding type expressions.
 * That is the `Rho` we mentioned.
 
 ``` haskell
@@ -365,9 +366,9 @@ inferRho :: Term -> Tc Rho
 ---
 ## Formulation: Type variable expansion
 
-$$ 
+$$
 \rho ::= \tau \\\
-\tau ::= \tau \rightarrow \tau \vert T \\\
+\tau ::= \tau \rightarrow \tau \, \vert \, ContantType \\\
 $$
 
 * And now we have the "type expression" defined.
@@ -378,10 +379,17 @@ type Tau   = Type
 
 data Type = Fun    Type Type ›    -- Function type
     ›     | TyCon  TyCon      ›   -- Type constants
-    ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
+    ›     | TyVar  TyVar      ›   -- Type variable with name
 
 data TyVar
-  = SkolemTv String Uniq›   -- A skolem constant; the String is•
+  = SkolemTv String Uniq›   -- Like the "a1", "a2", "a3" you see in GHC compiler message
+```
+
+--
+* Then we could start walking the AST of the expression
+
+``` haskell
+((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ---
@@ -395,7 +403,7 @@ inferRho expr
        ; readTcRef ref }
 ```
 
-![slc-ex5](image/SLC_ex1.svg)
+.medium-picture[![slc-ex5](image/SLC_ex1.svg)]
 
 ---
 
@@ -409,25 +417,16 @@ tcRho (App fun arg) exp_ty
        }
 ```
 
+.medium-picture[![slc-ex6](image/SLC_ex2.svg)]
+
 * Wait.. What is `unifyFun` ?
-
-![slc-ex6](image/SLC_ex2.svg)
-
-``` haskell
-unifyFun :: Rho -> Tc (Sigma, Rho)
---      (arg,res) <- unifyFunTy fun
--- unifies 'fun' with '(arg -> res)'
-unifyFun (Fun arg res) = return (arg,res)
-unifyFun tau           = do { arg_ty <- newTyVarTy
-                            ; res_ty <- newTyVarTy
-                            ; unify tau (arg_ty --> res_ty)
-                            ; return (arg_ty, res_ty) }
-```
 
 ---
 
 ## Robinson's Unification Algorithm in Action
 
+* Comparing to collecting constraints and solving them afterward, solving while walking is easier for explanation.
+* This function does two things: type expression expansion and unification.
 * `unify` the symbol `tau` with the formula of `a1 -> a2`
 * That is, Contraint $\tau = a1 \rightarrow a2$
 * We allocate type variables with `newTyVarTy`
@@ -449,10 +448,15 @@ unifyFun tau           = do { arg_ty <- newTyVarTy
 
 ``` haskell
 unify :: Tau -> Tau -> Tc ()
-unify (Fun arg1 res1)
-      (Fun arg2 res2)
-  = do { unify arg1 arg2; unify res1 res2 }
+unify (Fun arg1 res1) (Fun arg2 res2)
+  = do { unify arg1 arg2
+       ; unify res1 res2 }
 ```
+
+$$
+unify(a \rightarrow b = Burger \rightarrow Burger) = \\\ 
+unify(a = Burger) \cup unify(b = Burger)
+$$
 
 --
 
@@ -465,22 +469,27 @@ unify ty1 ty2
             vcat [ppr ty1, ppr ty2])
 ```
 
---
-
-* If it is a constant type, then check if they are matched.
-
-``` haskell
-unify (TyCon tc1) (TyCon tc2)•
-  | tc1 == tc2•
-  = return ()
-```
-
 ---
 
 ## Robinson's Unification Algorithm in Action
 
+* If it is a constant type, then check if they are matched.
+
 ``` haskell
-unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2 = return ()
+unify (TyCon tc1) (TyCon tc2) | tc1 == tc2 
+    = return ()
+```
+
+$$
+unify(Burger = Burger) = \Phi \\\
+$$
+
+--
+
+* If they are type variables, check if their "names" are the same. That is "a1 = a1". "a1" and "a2" are not equal. It is confusing but you would see it when we add the generalization part.
+``` haskell
+unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2 
+    = return ()
 ```
 --
 
