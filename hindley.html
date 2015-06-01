@@ -1032,7 +1032,7 @@ unifyUnboundVar tv1 ty2
 ```haskell
 make :: forall a b. a -> b -> Burger
 
-makeBurgers :: (forall a. a -> a) -> (Burger, Burger)
+makeBurgers :: (forall a b. a -> b -> Burger) -> (Burger, Burger)
 makeBburgers g = let f x = (x bread beef, x bread prawn)
                  in f g
 
@@ -1066,12 +1066,12 @@ data Term = Var Name              -- x
           | Ann Term Sigma        -- (f x) :: Int
 ```
 
---
-
 * Make $\rho$ could derive $\sigma \rightarrow \sigma$
-$$ 
-\rho ::= \tau | \sigma \rightarrow \sigma^{\prime} \\\
-\tau::= \tau \rightarrow \tau| T \\\
+
+$$
+\sigma ::= \forall a. \rho \\\
+\rho ::= \tau \, | \, \sigma \rightarrow \sigma^{\prime} \\\
+\tau::= \tau \rightarrow \tau \, | \, ConstantType \\\
 $$
 
 
@@ -1079,9 +1079,13 @@ $$
 
 ## Change in Inference
 
+* For inference, it is not intuitive. Extend the environment by marking `var` with `var_ty`, and do the inference for `body`
+* For type checking, a special case we have to deal with, that is determining if a type expression covers another type expression. In academic terminology, it is called "subsumption".
+* Denoted by `subsCheck`
+
 ``` haskell
 tcRho (ALam var var_ty body) (Check exp_ty)
-  = do { (arg_ty, body_ty) <- unifyFun exp_ty•
+  = do { (arg_ty, body_ty) <- unifyFun exp_ty
        ; subsCheck arg_ty var_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 
@@ -1090,32 +1094,28 @@ tcRho (ALam var var_ty body) (Infer ref)
        ; writeTcRef ref (var_ty --> body_ty) }
 ```
 
---
-* What is `subsCheck` ?
-
 
 ---
 
 ## Subsumption
 
-* A trick to make different poly type expression be equivalent.
+* Determine if a poly type expression could actually be incorporated into another poly type expression.
 
---
+* Are these two types equivalent?
 
-* With the type annotation added, the type derived from hindley milner.
 $$
-\forall a. a \rightarrow (\forall b.b \rightarrow b)
-$$
-
-* And it is actually equivalent to, but the type checker doesn't aware of that by the previous rules
-$$
-\forall ab. a \rightarrow b \rightarrow b
+(\forall a b. a \rightarrow b \rightarrow Burger) \rightarrow Burger \\\
+\forall ab. a \rightarrow b \rightarrow Burger \rightarrow Burger
 $$
 
-* We hope that the following to hold. That is, get some tricks to make the generalized types being "subsumed" to another generalized type.
+* They should be isomorphic. The hindley milner could only infer the type with forall at the top level, just looks like the second one. But what we would like to mark the type like the first one. How to get these two be equivalent by extending the existing rules?
+
+
+* That is, using tricks to make one polytype being "subsumed" by another polytype.
+
 $$
-\forall a. a \rightarrow (\forall b.b \rightarrow b) \leq \forall ab. a \rightarrow b \rightarrow b \\\
-\forall a. a \rightarrow (\forall b.b \rightarrow b) \geq \forall ab. a \rightarrow b \rightarrow b \\\
+(\forall a b. a \rightarrow b \rightarrow Burger) \rightarrow Burger \leq \forall ab. a \rightarrow b \rightarrow Burger \rightarrow Burger \\\
+(\forall a b. a \rightarrow b \rightarrow Burger) \rightarrow Burger \geq \forall ab. a \rightarrow b \rightarrow Burger \rightarrow Burger \\\
 $$
 
 
@@ -1140,7 +1140,7 @@ $$
 $$
 
 --
-* It's sometimes called Skolemization.
+* It's called Skolemization.
 
 --
 * The technique is to convert the annotated type expression into prenex form and see if one is more generalized than the other.
@@ -1172,7 +1172,7 @@ skolemise ty ›  ›   ›   -- Rule PRMONO
 
 * How do we tell if one of the polytype could subsume another?
 * Replace one of the polytype with type variable (It's called skolemize), and see if the other polytype could instantiate it.
-* It check if `sigma2` is at least as polymorphic as `sigma1 -> exp`
+* It checks if `sigma2` is at least as polymorphic as `sigma1 -> exp`
 
 ``` haskell
 subsCheck :: Sigma -> Sigma -> Tc ()
@@ -1213,8 +1213,9 @@ subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
 
 ## Wrapping up
 
-* The hindley milner system is the foundation of Haskell98 standrad
-* Higher rank corresponds to GHC's extension -XHigher-Rank
+* The hindley milner system is the foundation of Haskell98 standrad. With the knowledge about it, we could understand its extensions and new models inspired by HM.
+* Higher rank corresponds to GHC's extension -XHigher-Rank, with this addon, we could make the use case like passing in callback function to be typeable.
+* This slide tries to avoid any mathematical logical deduction for better comprehension. But to understand other papers, you still have to pickup the intuition of mathematical logic.
 
 ---
 
