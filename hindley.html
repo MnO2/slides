@@ -505,14 +505,52 @@ unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
 
 ---
 
-![slc-ex3](image/SLC_ex2.svg)
+.medium-picture[![slc-ex3](image/SLC_ex2.svg)]
+
+* `checkRho` do the typechecking for the argument
+* `instRho` writes the type back to the reference
+* We have this extra layer of abstraction is for the later extesion.
 
 ``` haskell
-tcRho (App fun arg) exp_ty
-  = do { fun_ty <- inferRho fun
-       ; (arg_ty, res_ty) <- unifyFun fun_ty
-       ; checkRho arg arg_ty
-       ; instRho res_ty exp_ty }
+tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
+                                ; (arg_ty, res_ty) <- unifyFun fun_ty
+                                ; checkRho arg arg_ty
+                                ; instRho res_ty exp_ty }
+
+checkRho :: Term -> Rho -> Tc ()
+checkRho expr ty = tcRho expr (Check ty)
+
+```
+
+
+---
+
+.medium-picture[![slc-ex3](image/SLC_ex2.svg)]
+
+* `checkRho` do the typechecking for the argument
+* `instRho` writes the type back to the reference
+* We have this extra layer of abstraction is for the later extesion.
+
+``` haskell
+tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
+                                ; (arg_ty, res_ty) <- unifyFun fun_ty
+                                ; checkRho arg arg_ty
+                                ; instRho res_ty exp_ty }
+
+instRho :: Rho -> Expected Rho -> Tc ()
+instRho t1 (Check t2) = unify t1 t1
+instRho t1 (Infer r) = writeTcRef r t1
+```
+
+
+---
+.medium-picture[![slc-ex3](image/SLC_ex3.svg)]
+
+``` haskell
+tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
+                                ; (arg_ty, res_ty) <- unifyFun fun_ty
+                                ; checkRho arg arg_ty
+                                ; instRho res_ty exp_ty }
 
 checkRho :: Term -> Rho -> Tc ()
 checkRho expr ty = tcRho expr (Check ty)
@@ -522,29 +560,9 @@ instRho t1 (Check t2) = unify t1 t1
 instRho t1 (Infer r) = writeTcRef r t1
 ```
 
-
 ---
 
-![slc-ex3](image/SLC_ex3.svg)
-
-``` haskell
-tcRho (App fun arg) exp_ty
-  = do { fun_ty <- inferRho fun
-       ; (arg_ty, res_ty) <- unifyFun fun_ty
-       ; checkRho arg arg_ty
-       ; instRho res_ty exp_ty }
-
-checkRho :: Term -> Rho -> Tc ()
-checkRho expr ty = tcRho expr (Check ty)
-
-instRho :: Rho -> Expected Rho -> Tc ()
-instRho t1 (Check t2) = unify t1 t1
-instRho t1 (Infer r) = writeTcRef r t1
-```
-
----
-
-![slc-ex4](image/SLC_ex4.svg)
+.medium-picture[![slc-ex4](image/SLC_ex4.svg)]
 
 ``` haskell
 tcRho (Lam var body) (Infer ref)
@@ -552,14 +570,32 @@ tcRho (Lam var body) (Infer ref)
        ; body_ty <- extendVarEnv var var_ty (inferRho body)
        ; writeTcRef ref (var_ty --> body_ty) }
 tcRho (Lam var body) (Check exp_ty)
-  = do { (var_ty, body_ty) <- unifyFun exp_ty•
+  = do { (var_ty, body_ty) <- unifyFun exp_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 ```
-*  `extendVarEnv` put a record marking a term's type as Rho, for the lookup afterward.
+
+* We allocate a type variable for lambda argument, then using `extendVarEnv` to put a record marking the argument's type is `var_ty`. This term could be lookedup during the inference of `body`.
 
 ---
 
-![slc-ex6](image/SLC_ex5.svg)
+.medium-picture[![slc-ex4](image/SLC_ex4.svg)]
+
+``` haskell
+tcRho (Lam var body) (Infer ref)
+  = do { var_ty  <- newTyVarTy
+       ; body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+tcRho (Lam var body) (Check exp_ty)
+  = do { (var_ty, body_ty) <- unifyFun exp_ty
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+```
+
+* With the environment extended, we inference `body`, and put the inferred type `var_ty --> body_ty` into reference.
+* If we are doing type checking, we just do the unification. For the separation of cases, it is also for the later extension.
+
+---
+
+.medium-picture[![slc-ex6](image/SLC_ex5.svg)]
 
 ``` haskell
 tcRho (Var v) exp_ty•
@@ -567,19 +603,37 @@ tcRho (Var v) exp_ty•
        ; instRho v_rho exp_ty }
 ```
 
-* `lookupVar` lookup a Term's type by checking if the record exists.
+* lookup the term `v` in the environment, and save it into `exp_ty`
 
 ---
 
-![slc-ex6](image/SLC_ex6.svg)
+.medium-picture[![slc-ex6](image/SLC_ex6.svg)]
+
+``` haskell
+tcRho (Lam var body) (Infer ref)
+  = do { var_ty  <- newTyVarTy
+       ; body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (var_ty --> body_ty) }
+tcRho (Lam var body) (Check exp_ty)
+  = do { (var_ty, body_ty) <- unifyFun exp_ty
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+```
 
 ---
 
-![slc-ex6](image/SLC_ex7.svg)
+.medium-picture[![slc-ex6](image/SLC_ex7.svg)]
+
+``` haskell
+tcRho (Var v) exp_ty
+  = do { v_rho <- lookupVar v
+       ; instRho v_rho exp_ty }
+```
+
+* lookup the term `v` in the environment, and save it into `exp_ty`
 
 ---
 
-![slc-ex6](image/SLC_ex8.svg)
+.medium-picture[![slc-ex6](image/SLC_ex8.svg)]
 
 ``` haskell
 tcRho (Lit _) exp_ty
@@ -590,36 +644,58 @@ tcRho (Lit _) exp_ty
 
 ---
 
-![slc-ex6](image/SLC_ex9.svg)
+.medium-picture[![slc-ex6](image/SLC_ex9.svg)]
 
 ``` haskell
-tcrho (lit _) exp_ty
-  = instrho burgertype exp_ty
+tcRho (lit _) exp_ty
+  = instRho BurgerType exp_ty
 ```
 
 * constant type is trivial.
 
 ---
 
-![slc-ex6](image/SLC_ex10.svg)
+.medium-picture[![slc-ex6](image/SLC_ex10.svg)]
 
 ``` haskell
-tcrho (lit _) exp_ty
-  = instrho burgertype exp_ty
+tcRho (lit _) exp_ty
+  = instRho BurgerType exp_ty
 ```
 
 * constant type is trivial.
+
+
 ---
 
-## Tree Walking
+.medium-picture[![slc-ex3](image/SLC_ex2.svg)]
 
-* After tree walking, we should get the type of the the whole expression
+``` haskell
+tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
+                                ; (arg_ty, res_ty) <- unifyFun fun_ty
+                                ; checkRho arg arg_ty
+                                ; instRho res_ty exp_ty }
+```
+
+* `arg_ty` is `Beef`
+* `res_ty` is `Burger`
+* save `Burger` into `exp_ty`
 
 ``` haskell
 inferRho expr
   = do { ref <- newTcRef (error "inferRho: empty result")
        ; tcRho expr (Infer ref)
        ; readTcRef ref }
+```
+
+---
+
+## Tree Walking
+
+* Finally we get the whole program's type
+
+``` haskell
+typecheck :: Term -> Tc Rho
+typecheck e = inferRho e
 ```
 
 --
@@ -630,17 +706,25 @@ inferRho expr
 ## The defect of simply typed lambda calculus
 
 * Suppose that we would like to have a generalized version of hamburger making.
-* Hamburger is not only for meat, but could be fish. And we could use Rice for Bread
+* Hamburger is not only for meat, but could be prawn. And we could use Rice for Bread
+
+![](image/jarkarta_burger.jpg)
+
 
 ``` haskell
-(\f -> ((f bread meat), (f bread fish), (f rice meat)) ) (make)
+(\f -> ((f bread meat), (f bread prawn), (f rice meat)) ) (make)
 ```
+
+
+---
+
+## The defect of simply typed lambda calculus
 
 * The trick discovered by Hindley and Milner independently is to add a "let" into grammar
 * It's called Let polymorphism.
 
 ``` haskell
-let f = make in ((f bread meat), (f bread fish), (f rice meat))
+let f = make in ((f bread meat), (f bread prawn), (f rice meat))
 ```
 
 * The type system is also generalized. For the language to describe "type" (type expression) is added with polytype, that is `forall a. a`
@@ -654,7 +738,7 @@ forall a b. a -> b -> Burger
 
 ## Let Polymorphism
 
-* First of all, we modified the grammar for value level expression.
+* Let's modify the grammar for value level expression.
 
 ``` haskell
 data Term = Var Name              -- x
@@ -667,6 +751,11 @@ data Term = Var Name              -- x
 
 * We add a "Let Name Term Term" here
 * Polytypes (We use Sigma here) are types containing variables bound by one or more for-all quantifiers
+
+$$
+\forall a. a \rightarrow a \rightarrow a
+$$
+
 * Then we extend the structure we previously defined one by one.
 
 ---
