@@ -380,6 +380,7 @@ type Tau   = Type
 data Type = Fun    Type Type ›    -- Function type
     ›     | TyCon  TyCon      ›   -- Type constants
     ›     | TyVar  TyVar      ›   -- Type variable with name
+    ›     | MetaTv MetaTv     ›   -- A meta type variable
 
 data TyVar
   = SkolemTv String Uniq›   -- Like the "a1", "a2", "a3" you see in GHC compiler message
@@ -467,6 +468,27 @@ unify ty1 ty2
   | badType ty1 || badType ty2  -- Compiler error
   = failTc (text "Panic! Unexpected types in unification:" <+>
             vcat [ppr ty1, ppr ty2])
+```
+
+---
+
+## Robinson's Unification Algorithm in Action
+
+* If one of them is meta type variable `Rho` or `Tau`
+
+``` haskell
+unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
+unify (MetaTv tv) ty = unifyVar tv ty
+unify ty (MetaTv tv) = unifyVar tv ty
+```
+
+``` haskell
+unifyVar :: MetaTv -> Tau -> Tc ()
+unifyVar tv1 ty2
+  = do { mb_ty1 <- readTv tv1
+       ; case mb_ty1 of
+           Just ty1 -> unify ty1 ty2
+           Nothing  -> error "in simply type calculus, type shouldn't be unbound" }
 ```
 
 ---
@@ -765,9 +787,9 @@ $$
 * Then we extends the type expression.
 
 $$ 
-\sigma := \forall a. \rho \\\
+\sigma ::= \forall a. \rho \\\
 \rho ::= \tau \\\
-\tau::= \tau \rightarrow \tau| T \\\
+\tau ::= \tau \rightarrow \tau \, | \, ConstantType \\\
 $$
 
 * We add another meta variable "Sigma" for type level expansion.
@@ -785,7 +807,7 @@ data Type = ForAll [TyVar] Rho›   -- Forall type
     ›     | MetaTv MetaTv     ›   -- A meta type variable
 
 data TyVar
-  = BoundTv String› ›   -- A type variable bound by a ForAll
+  = BoundTv String› ›       -- A type variable bound by a ForAll
   | SkolemTv String Uniq›   -- A skolem constant; the String is•
 ```
 
@@ -794,62 +816,70 @@ data TyVar
 
 ## Instantiation
 
-* With the polytype introduced, an acompanying concept is introduced, it's called instantiation.
+* With the polytype introduced, a corresponding concept is introduced, it's called instantiation.
 
 --
 
-* It's replacing "type variable" identified by "schema" with fresh "type variable"
+* It's replacing "type variable" identified by "schema" with a fresh "type variable" or "type constant"
 
 --
 
 * The left hand side could instantiate the right hand side.
 
 $$
-a \leq Int \\\
-a \rightarrow a \leq Int \rightarrow Int \\\
-a \rightarrow a \leq b \rightarrow b \\\
+\forall a. a \leq Int \\\
+\forall a. a \rightarrow a \leq Int \rightarrow Int \\\
+\forall a. a \rightarrow a \leq b \rightarrow b \\\
 \forall a. a \rightarrow a \leq c \rightarrow c \\\
 $$
-
---
-
-* How do we tell if one of the polytype could subsume another?
-
---
-
-* Skolemise one of the polytype, and see if the other polytype could instantiate it after skolemization.
 
 
 ---
 
 ## Instantiation
 
-* Substitute the type variable appears in `forall`, with newly instantiated type variables, they are not the same from any other type variables.
+* Substitute the type variable appears in the topmost `forall`, with newly instantiated type variables, they are not the same from any other type variables.
+
+``` haskell
+instantiate :: Sigma -> Tc Rho
+instantiate (ForAll tvs ty) = do { tvs' <- mapM (\_ -> newMetaTyVar) tvs
+                                 ; return (substTy tvs (map MetaTv tvs') ty) }
+instantiate ty = return ty
+```
+
+* We split `instSigma` in two cases is for later higher-rank extension.
+
+``` haskell
+instRho :: Rho -> Expected Rho -> Tc ()
+instRho t1 (Check t2) = unify t1 t1
+instRho t1 (Infer r) = writeTcRef r t1
+```
+
+Becomes
 
 ``` haskell
 instSigma :: Sigma -> Expected Rho -> Tc ()
--- Invariant: if the second argument is (Check rho),
--- ›      then rho is in weak-prenex form
 instSigma t1 (Check t2) = unify t1 t2
 instSigma t1 (Infer r)  = do { t1' <- instantiate t1
                              ; writeTcRef r t1' }
-
-instantiate :: Sigma -> Tc Rho
--- Instantiate the topmost for-alls of the argument type
--- with flexible type variables
-instantiate (ForAll tvs ty)•
-  = do { tvs' <- mapM (\_ -> newMetaTyVar) tvs
-       ; return (substTy tvs (map MetaTv tvs') ty) }
-instantiate ty
 ```
+
 
 ---
 
 ## Generalization
 
-* Another concept introduced is called "generalization.
-* It's replacing a "type variable" into a "polytype". Think it like a C++ template that could generate function specialization.
+* Another concept introduced is called "generalization".
+* It's replacing a "type variable" with a "polytype". Think it like replacing a simple function in C++ and generalize it with a C++ template function.
 
+``` haskell
+inferRho expr
+  = do { ref <- newTcRef (error "inferRho: empty result")
+       ; tcRho expr (Infer ref)
+       ; readTcRef ref }
+```
+
+Becomes
 
 ``` haskell
 inferSigma :: Term -> Tc Sigma
@@ -860,8 +890,23 @@ inferSigma e
         ; res_tvs <- getMetaTyVars [exp_ty]
         ; let forall_tvs = res_tvs \\ env_tvs
         ; quantify forall_tvs exp_ty }
+```
 
+* First using `inferRho` to infer the type of the term, getting `exp_ty`, in `exp_ty` it contains some unbound type variables.
+* We use `quantify` to add `forall` for those unbound type variables.
 
+---
+
+## Generalization
+
+``` haskell
+checkRho :: Term -> Rho -> Tc ()
+checkRho expr ty = tcRho expr (Check ty)
+```
+
+Becomes
+
+``` haskell
 checkSigma :: Term -> Sigma -> Tc ()
 checkSigma expr sigma
 = do { (skol_tvs, rho) <- skolemise sigma
@@ -876,7 +921,17 @@ checkSigma expr sigma
 
 ---
 
-![slc-ex6](image/let_ex2.svg)
+.medium-picture[![slc-ex6](image/let_ex1.svg)]
+
+``` haskell
+let f = \x -> \y -> burger in ((f bread) meat)
+```
+
+---
+
+.medium-picture[![slc-ex6](image/let_ex2.svg)]
+
+* When bumping into a `Let`, we use `inferSigma` but not `inferRho`. `inferSigma` will generalize the type expression with a toplevel `forall` in `var_ty`. So that the `forall` variables could be freely instantiated duing the inference of the `body`.
 
 ``` haskell
 tcRho (Let var rhs body) exp_ty
@@ -886,7 +941,9 @@ tcRho (Let var rhs body) exp_ty
 
 ---
 
-![slc-ex6](image/let_ex13.svg)
+.medium-picture[![slc-ex6](image/let_ex13.svg)]
+
+* When bumping into a `App`, we no longer use `checkRho` or `instRho`. The polytype version `checkSigma` and `instSigma` would typecheck the argument see if the function argument type could subsume the input argument type. And `instSigma` would instantiate the function return type to the expected type of `App`
 
 ``` haskell
 tcRho (App fun arg) exp_ty
@@ -896,10 +953,11 @@ tcRho (App fun arg) exp_ty
        ; instSigma res_ty exp_ty }
 ```
 
-
 ---
 
-![slc-ex6](image/let_ex1.svg)
+.medium-picture[![slc-ex6](image/let_ex13.svg)]
+
+* For contant case, it is also no longer a simple saving, but has to instantiate the constant type.
 
 ``` haskell
 tcRho (Lit _) exp_ty
@@ -908,13 +966,19 @@ tcRho (Lit _) exp_ty
 
 ---
 
-![slc-ex6](image/let_ex1.svg)
+.medium-picture[![slc-ex6](image/let_ex13.svg)]
+
+* for `Var` case, the instantiation also has to be applied.
 
 ``` haskell
-tcRho (Var v) exp_ty•
-  = do { v_sigma <- lookupVar v•
+tcRho (Var v) exp_ty
+  = do { v_sigma <- lookupVar v
        ; instSigma v_sigma exp_ty }
+```
 
+* For annotation, we would check if the marked annotation could subsume the type of the `body`, if it does, then using annotation type to instantiate expected type.
+
+``` haskell
 tcRho (Ann body ann_ty) exp_ty
    = do { checkSigma body ann_ty
         ; instSigma ann_ty exp_ty }
@@ -923,41 +987,26 @@ tcRho (Ann body ann_ty) exp_ty
 
 ---
 
-
 ## Change in Unification
 
-``` haskell
-unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
-unify (MetaTv tv) ty = unifyVar tv ty
-unify ty (MetaTv tv) = unifyVar tv ty
-```
-
---
+* For `unifyVar`, now it is possible to be unbound. We add `unifyUnboundVar` to handle this case.
 
 ``` haskell
 unifyVar :: MetaTv -> Tau -> Tc ()
--- Invariant: tv1 is a flexible type variable
-unifyVar tv1 ty2        -- Check whether tv1 is bound
-  = do { mb_ty1 <- readTv tv1•••
+unifyVar tv1 ty2
+  = do { mb_ty1 <- readTv tv1
        ; case mb_ty1 of
            Just ty1 -> unify ty1 ty2
-           Nothing  -> unifyUnboundVar tv1 ty2 }
+           Nothing  -> unifyUnboundVar ty1 ty2 }
 ```
-
----
-
-## Change in Unification
 
 ``` haskell
 unifyUnboundVar :: MetaTv -> Tau -> Tc ()
--- Invariant: the flexible type variable tv1 is not bound
 unifyUnboundVar tv1 ty2@(MetaTv tv2)
-  = do { -- We know that tv1 /= tv2 (else the•
-         -- top case in unify would catch it)
-         mb_ty2 <- readTv tv2
+  = do { mb_ty2 <- readTv tv2
        ; case mb_ty2 of
            Just ty2' -> unify (MetaTv tv1) ty2'
-           Nothing  -> writeTv tv1 ty2 }•
+           Nothing  -> writeTv tv1 ty2 }
 
 unifyUnboundVar tv1 ty2
   = do { tvs2 <- getMetaTyVars [ty2]
@@ -972,45 +1021,31 @@ unifyUnboundVar tv1 ty2
 
 ## What's the defect of hindley-milner type system?
 
-* The worst case of the time complexity is exponential.
-
-``` haskell
-let b = true in
-let f0 = λx. x+1 in
-let f1 = λx. if b then f0 else λy.x y in
-let f2 = λx. if b then f1 else λy.x y in
-.
-.
-let fn = λx. if b then fn−1 else λy.x y in
-```
-
-* Reference type would break the type system's soundness
-
---
-* But we are going to stres on the last one, which is solvable by higher-rank type system
 * Even with the addition of "let", it only tells the system to "generalize" at the syntax where "let" happened.
 
 ```haskell
 (\f -> (f "foo", f 13)) (\x -> x)
 ```
 
+* Consider the following use case. We want to have the `make` be passed in `makeBurgers` function
+
+```haskell
+make :: forall a b. a -> b -> Burger
+
+makeBurgers :: (forall a. a -> a) -> (Burger, Burger)
+makeBburgers g = let f x = (x bread beef, x bread prawn)
+                 in f g
+
+makeBurgers make
+```
+
+* It would not typecheck of hindley-milner, since the `makeBurgers`'s forall is not at the top level.
 
 ---
 
 ## Higher-rank type system 
 
 * To solve the problem of let polymorphism where it is not generalized at the "argument"
-* Consider the following use case.
-
-```haskell
-make :: (forall a. a -> a) -> a -> b -> Burger
-
-makeBurgers :: (forall a. a -> a) -> (Burger, Burger)
-makeBburgers g = let f x = (x bread beef, x bread fish)
-                 in f g
-
-makeBurgers make
-```
 
 * We add a type annotation to help the type system to generalize at the argument, without a big change in hindley-milner type system.
 
@@ -1135,6 +1170,8 @@ skolemise ty ›  ›   ›   -- Rule PRMONO
 
 ## Subsumption
 
+* How do we tell if one of the polytype could subsume another?
+* Replace one of the polytype with type variable (It's called skolemize), and see if the other polytype could instantiate it.
 * It check if `sigma2` is at least as polymorphic as `sigma1 -> exp`
 
 ``` haskell
