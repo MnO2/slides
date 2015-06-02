@@ -824,7 +824,7 @@ data TyVar
 
 --
 
-* The left hand side could instantiate the right hand side.
+* The LHS could be rewritten as the RHS
 
 $$
 \forall a. a \leq Int \\\
@@ -1033,7 +1033,7 @@ unifyUnboundVar tv1 ty2
 make :: forall a b. a -> b -> Burger
 
 makeBurgers :: (forall a b. a -> b -> Burger) -> (Burger, Burger)
-makeBburgers g = let f x = (x bread beef, x bread prawn)
+makeBurgers g = let f x = (x bread beef, x bread prawn)
                  in f g
 
 makeBurgers make
@@ -1104,8 +1104,8 @@ tcRho (ALam var var_ty body) (Infer ref)
 * Are these two types equivalent?
 
 $$
-(\forall a b. a \rightarrow b \rightarrow Burger) \rightarrow Burger \\\
-\forall ab. a \rightarrow b \rightarrow Burger \rightarrow Burger
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \\\
+\forall ab. a \rightarrow b \rightarrow b \\\
 $$
 
 * They should be isomorphic. The hindley milner could only infer the type with forall at the top level, just looks like the second one. But what we would like to mark the type like the first one. How to get these two be equivalent by extending the existing rules?
@@ -1114,8 +1114,8 @@ $$
 * That is, using tricks to make one polytype being "subsumed" by another polytype.
 
 $$
-(\forall a b. a \rightarrow b \rightarrow Burger) \rightarrow Burger \leq \forall ab. a \rightarrow b \rightarrow Burger \rightarrow Burger \\\
-(\forall a b. a \rightarrow b \rightarrow Burger) \rightarrow Burger \geq \forall ab. a \rightarrow b \rightarrow Burger \rightarrow Burger \\\
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \leq \forall ab. a \rightarrow b \rightarrow b \\\
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \geq \forall ab. a \rightarrow b \rightarrow b \\\
 $$
 
 
@@ -1127,7 +1127,7 @@ $$
 
 --
 
-* And the prenex conversion is like the following
+* And the prenex conversion is like the following, floating the "forall" at the right of the arrows to the top.
 
 $$
 \forall a. a \rightarrow (\forall b.b \rightarrow b)
@@ -1214,7 +1214,7 @@ subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
 ## Wrapping up
 
 * The hindley milner system is the foundation of Haskell98 standrad. With the knowledge about it, we could understand its extensions and new models inspired by HM.
-* Higher rank corresponds to GHC's extension -XHigher-Rank, with this addon, we could make the use case like passing in callback function to be typeable.
+* Higher rank corresponds to GHC's extension -XRankNTypes, with this addon, we could make the use case like passing in callback function to be typeable.
 * This slide tries to avoid any mathematical logical deduction for better comprehension. But to understand other papers, you still have to pickup the intuition of mathematical logic.
 
 ---
