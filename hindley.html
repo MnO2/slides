@@ -1079,7 +1079,7 @@ $$
 
 ## Change in Inference
 
-* For inference, it is not intuitive. Extend the environment by marking `var` with `var_ty`, and do the inference for `body`
+* For inference, it is intuitive. Extend the environment by marking `var` with `var_ty`, and do the inference for `body`
 * For type checking, a special case we have to deal with, that is determining if a type expression covers another type expression. In academic terminology, it is called "subsumption".
 * Denoted by `subsCheck`
 
@@ -1101,14 +1101,33 @@ tcRho (ALam var var_ty body) (Infer ref)
 
 * Determine if a poly type expression could actually be incorporated into another poly type expression.
 
-* Are these two types equivalent?
+* Notice that the type expression inferred by hindley milner, it would only look like this:
 
 $$
-\forall a. a \rightarrow (\forall b.b \rightarrow b) \\\
+\forall a. a \rightarrow \forall b.b \rightarrow \forall c.c \rightarrow c
+$$
+
+but not
+
+$$
+\forall b c. (\forall a. a \rightarrow a) \rightarrow b \rightarrow c
+$$
+
+* Therefore what we only have to take this form into consideration when unify with type annotations.
+
+
+---
+
+## Subsumption
+
+* However, are these two types equivalent?
+
+$$
+\forall a. a \rightarrow \forall b.b \rightarrow b \\\
 \forall ab. a \rightarrow b \rightarrow b \\\
 $$
 
-* They should be isomorphic. The hindley milner could only infer the type with forall at the top level, just looks like the second one. But what we would like to mark the type like the first one. How to get these two be equivalent by extending the existing rules?
+* They should be isomorphic. The hindley milner could infer the type with forall looks like the first one. But what if we annotate the type as the second one. How to get these two be equivalent by extending the existing rules?
 
 
 * That is, using tricks to make one polytype being "subsumed" by another polytype.
@@ -1153,17 +1172,14 @@ $$
 
 ``` haskell
 skolemise :: Sigma -> Tc ([TyVar], Rho)
--- Performs deep skolemisation, retuning the•
--- skolem constants and the skolemised type
-skolemise (ForAll tvs ty)›  -- Rule PRPOLY
+skolemise (ForAll tvs ty)
   = do { sks1 <- mapM newSkolemTyVar tvs
        ; (sks2, ty') <- skolemise (substTy tvs (map TyVar sks1) ty)
        ; return (sks1 ++ sks2, ty') }
-skolemise (Fun arg_ty res_ty)›  -- Rule PRFUN
+skolemise (Fun arg_ty res_ty)
   = do { (sks, res_ty') <- skolemise res_ty
        ; return (sks, Fun arg_ty res_ty') }
-skolemise ty ›  ›   ›   -- Rule PRMONO
-  = return ([], ty)
+skolemise ty = return ([], ty)
 ```
 
 ---
@@ -1171,7 +1187,7 @@ skolemise ty ›  ›   ›   -- Rule PRMONO
 ## Subsumption
 
 * How do we tell if one of the polytype could subsume another?
-* Replace one of the polytype with type variable (It's called skolemize), and see if the other polytype could instantiate it.
+* First we skolemize it, and see if the other polytype could instantiate the `Rho` part.
 * It checks if `sigma2` is at least as polymorphic as `sigma1 -> exp`
 
 ``` haskell
@@ -1179,13 +1195,9 @@ subsCheck :: Sigma -> Sigma -> Tc ()
 subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
   = do { (skol_tvs, rho2) <- skolemise sigma2
        ; subsCheckRho sigma1 rho2
-       ; esc_tvs <- getFreeTyVars [sigma1,sigma2]
+       ; esc_tvs <- getFreeTyVars [sigma1, sigma2]
        ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-       ; check (null bad_tvs)
-               (vcat [text "Subsumption check failed:",
-                      nest 2 (ppr sigma1),
-                      text "is not as polymorphic as",
-                      nest 2 (ppr sigma2)])
+       ; check (null bad_tvs) (error "Subsumption check failed:")
 ```
 
 ---
@@ -1196,15 +1208,15 @@ subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
 
 ``` haskell
 subsCheckRho :: Sigma -> Rho -> Tc ()
-subsCheckRho sigma1@(ForAll _ _) rho2›   -- Rule SPEC
+subsCheckRho sigma1@(ForAll _ _) rho2›
   = do { rho1 <- instantiate sigma1
        ; subsCheckRho rho1 rho2 }
-subsCheckRho rho1 (Fun a2 r2)            -- Rule FUN
+subsCheckRho rho1 (Fun a2 r2)
   = do { (a1,r1) <- unifyFun rho1; subsCheckFun a1 r1 a2 r2 }
-subsCheckRho (Fun a1 r1) rho2            -- Rule FUN
+subsCheckRho (Fun a1 r1) rho2
   = do { (a2,r2) <- unifyFun rho2; subsCheckFun a1 r1 a2 r2 }
-subsCheckRho tau1 tau2                   -- Rule MONO
-  = unify tau1 tau2    -- Revert to ordinary unification
+subsCheckRho tau1 tau2
+  = unify tau1 tau2
 
 subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
 subsCheckFun a1 r1 a2 r2 = do { subsCheck a2 a1; subsCheckRho r1 r2 }
