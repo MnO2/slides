@@ -230,7 +230,7 @@ $$
 * Then we could check if this program follows the rule of the theorem.
 
 ``` haskell
-((\x: Bread -> \y: Beef -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x -> \y -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 
@@ -249,7 +249,7 @@ $$
 * Missing y type
 
 ``` haskell
-((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ---
@@ -285,12 +285,11 @@ inferRho expr
 * Notice that we could write down some equations when seeing the formula. Then we could solve the eqautions like high-school algebra.
 
 ``` haskell
-((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ``` haskell
 a -> b -> c = Bread -> Beef -> Burger
-a = Bread
 c = Burger
 ```
 
@@ -322,11 +321,10 @@ $$ \\{ T_1 \Rightarrow T_3 + int, \, T_2 \Rightarrow (T_3 + int) * bool \\} $$
 
 ``` haskell
 a -> b -> c = Bread -> Beef -> Burger
-a = Bread
 c = Burger
 ```
 
-* Then solving the equations gives us `b = Beef`
+* Then solving the equations gives us `b = Beef` and `a = Bread`
 
 --
 
