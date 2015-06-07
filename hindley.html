@@ -338,7 +338,7 @@ c = Burger
 * But notice that we don't have "type variable" either in the syntax or parsed abstract syntax tree.
 
 ``` haskell
-((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 --
@@ -380,6 +380,12 @@ data Type = Fun    Type Type ›    -- Function type
     ›     | TyVar  TyVar      ›   -- Type variable with name
     ›     | MetaTv MetaTv     ›   -- A meta type variable
 
+data MetaTv = Meta Uniq TyRef  -- Can unify with any tau-type
+
+type TyRef = IORef (Maybe Tau)
+        -- 'Nothing' means the type variable is not substituted
+        -- 'Just ty' means it has been substituted by 'ty'
+
 data TyVar
   = SkolemTv String Uniq›   -- Like the "a1", "a2", "a3" you see in GHC compiler message
 ```
@@ -387,13 +393,13 @@ data TyVar
 --
 * Then we could start walking the AST of the expression
 
-``` haskell
-((\x: Bread -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
-```
-
 ---
 
 ## Tree Walking
+
+``` haskell
+((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+```
 
 ``` haskell
 inferRho expr
@@ -457,17 +463,6 @@ unify(a \rightarrow b = Burger \rightarrow Burger) = \\\
 unify(a = Burger) \cup unify(b = Burger)
 $$
 
---
-
-* If the type is `badType`, then indicate it is a compilation error.
-
-``` haskell
-unify ty1 ty2
-  | badType ty1 || badType ty2  -- Compiler error
-  = failTc (text "Panic! Unexpected types in unification:" <+>
-            vcat [ppr ty1, ppr ty2])
-```
-
 ---
 
 ## Robinson's Unification Algorithm in Action
@@ -475,6 +470,11 @@ unify ty1 ty2
 * If one of them is meta type variable `Rho` or `Tau`
 
 ``` haskell
+data MetaTv = Meta Uniq TyRef  -- Can unify with any tau-type
+
+type TyRef = IORef (Maybe Tau)
+
+
 unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
 unify (MetaTv tv) ty = unifyVar tv ty
 unify ty (MetaTv tv) = unifyVar tv ty
@@ -486,7 +486,7 @@ unifyVar tv1 ty2
   = do { mb_ty1 <- readTv tv1
        ; case mb_ty1 of
            Just ty1 -> unify ty1 ty2
-           Nothing  -> error "in simply type calculus, type shouldn't be unbound" }
+           Nothing  -> failTc "in simply type calculus, type shouldn't be unbound" }
 ```
 
 ---
@@ -516,7 +516,7 @@ unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2
 * Otherwise, failed to check the program.
 
 ``` haskell
-unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
+unify ty1 ty2 = failTc "Unable to unify types"
 ```
 
 --
@@ -732,7 +732,7 @@ typecheck e = inferRho e
 
 
 ``` haskell
-(\f -> ((f bread meat), (f bread prawn), (f rice meat)) ) (make)
+(\f -> ((f bread meat), (f rice prawn)) ) (make)
 ```
 
 
@@ -744,7 +744,7 @@ typecheck e = inferRho e
 * It's called Let polymorphism.
 
 ``` haskell
-let f = make in ((f bread meat), (f bread prawn), (f rice meat))
+let f = make in ((f bread meat), (f rice prawn))
 ```
 
 * The type system is also generalized. For the language to describe "type" (type expression) is added with polytype, that is `forall a. a`
@@ -770,7 +770,7 @@ data Term = Var Name              -- x
 ```
 
 * We add a "Let Name Term Term" here
-* Polytypes (We use Sigma here) are types containing variables bound by one or more for-all quantifiers
+* Polytypes are types containing variables bound by one or more for-all quantifiers
 
 $$
 \forall a. a \rightarrow a \rightarrow a
@@ -822,7 +822,7 @@ data TyVar
 
 --
 
-* The LHS could be rewritten as the RHS
+* The LHS instantiates the RHS
 
 $$
 \forall a. a \leq Int \\\
@@ -912,8 +912,7 @@ checkSigma expr sigma
      ; env_tys <- getEnvTypes
      ; esc_tvs <- getFreeTyVars (sigma : env_tys)
      ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-     ; check (null bad_tvs)
-             (text "Type not polymorphic enough") }
+     ; check (null bad_tvs) "Type not polymorphic enough" }
 ```
 
 
@@ -1031,7 +1030,7 @@ unifyUnboundVar tv1 ty2
 make :: forall a b. a -> b -> Burger
 
 makeBurgers :: (forall a b. a -> b -> Burger) -> (Burger, Burger)
-makeBurgers g = let f x = (x bread beef, x bread prawn)
+makeBurgers g = let f x = (x bread beef, x rice prawn)
                  in f g
 
 makeBurgers make
@@ -1190,12 +1189,12 @@ skolemise ty = return ([], ty)
 
 ``` haskell
 subsCheck :: Sigma -> Sigma -> Tc ()
-subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
+subsCheck sigma1 sigma2 
   = do { (skol_tvs, rho2) <- skolemise sigma2
        ; subsCheckRho sigma1 rho2
        ; esc_tvs <- getFreeTyVars [sigma1, sigma2]
        ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-       ; check (null bad_tvs) (error "Subsumption check failed:")
+       ; check (null bad_tvs) "Subsumption check failed"
 ```
 
 ---
