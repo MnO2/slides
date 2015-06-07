@@ -845,6 +845,10 @@ instantiate (ForAll tvs ty) = do { tvs' <- mapM (\_ -> newMetaTyVar) tvs
 instantiate ty = return ty
 ```
 
+$$
+\forall a_1. a_1 \rightarrow \forall a_2. a_2  \Rightarrow  \forall a_1. \tau_1 \rightarrow \forall a_2. a_2
+$$
+
 * We split `instSigma` in two cases is for later higher-rank extension.
 
 ``` haskell
@@ -893,6 +897,34 @@ inferSigma e
 * First using `inferRho` to infer the type of the term, getting `exp_ty`, in `exp_ty` it contains some unbound type variables.
 * We use `quantify` to add `forall` for those unbound type variables.
 
+
+---
+
+## Generalization
+
+``` haskell
+inferSigma :: Term -> Tc Sigma
+inferSigma e
+   = do { exp_ty <- inferRho e
+        ; env_tys <- getEnvTypes
+        ; env_tvs <- getMetaTyVars env_tys
+        ; res_tvs <- getMetaTyVars [exp_ty]
+        ; let forall_tvs = res_tvs \\ env_tvs
+        ; quantify forall_tvs exp_ty }
+```
+
+* With $a_1$ bound by outer scopes.
+
+$$
+b_1 \rightarrow a_1
+$$
+
+Becomes
+
+$$
+\forall b. b \rightarrow a_1
+$$
+
 ---
 
 ## Generalization
@@ -912,9 +944,10 @@ checkSigma expr sigma
      ; env_tys <- getEnvTypes
      ; esc_tvs <- getFreeTyVars (sigma : env_tys)
      ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-     ; check (null bad_tvs) "Type not polymorphic enough" }
+     ; assert (null bad_tvs) "Type not polymorphic enough" }
 ```
 
+* Check if any of `skol_tvs` escape as free variables in the outer scope.
 
 ---
 
@@ -1194,7 +1227,6 @@ subsCheck sigma1 sigma2
        ; subsCheckRho sigma1 rho2
        ; esc_tvs <- getFreeTyVars [sigma1, sigma2]
        ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-       ; check (null bad_tvs) "Subsumption check failed"
 ```
 
 ---
