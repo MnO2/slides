@@ -486,7 +486,7 @@ unifyVar tv1 ty2
   = do { mb_ty1 <- readTv tv1
        ; case mb_ty1 of
            Just ty1 -> unify ty1 ty2
-           Nothing  -> failTc "in simply type calculus, type shouldn't be unbound" }
+           Nothing  -> failTc "in simply type calculus, MetaTv is always initialized with Just," }
 ```
 
 ---
@@ -1019,7 +1019,7 @@ tcRho (Ann body ann_ty) exp_ty
 
 ## Change in Unification
 
-* For `unifyVar`, now it is possible to be unbound. We add `unifyUnboundVar` to handle this case.
+* For `unifyVar`, now it is possible to be unbound. Since the `MetaVar` could be initialized by `instantiate` with `Nothing`. We add `unifyUnboundVar` to handle this case.
 
 ``` haskell
 unifyVar :: MetaTv -> Tau -> Tc ()
@@ -1027,18 +1027,19 @@ unifyVar tv1 ty2
   = do { mb_ty1 <- readTv tv1
        ; case mb_ty1 of
            Just ty1 -> unify ty1 ty2
-           Nothing  -> unifyUnboundVar ty1 ty2 }
+           Nothing  -> unifyUnboundVar tv1 ty2 }
 ```
 
 ``` haskell
 unifyUnboundVar :: MetaTv -> Tau -> Tc ()
-unifyUnboundVar tv1 ty2@(MetaTv tv2)
+unifyUnboundVar tv1 ty2@(MetaTv tv2)  -- tv1 is the MetaTv created in instantiate
   = do { mb_ty2 <- readTv tv2
        ; case mb_ty2 of
-           Just ty2' -> unify (MetaTv tv1) ty2'
+           -- check the case unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
+           Just ty2' -> unify (MetaTv tv1) ty2'  
+           -- basically do nothing
            Nothing  -> writeTv tv1 ty2 }
-
-unifyUnboundVar tv1 ty2
+unifyUnboundVar tv1 ty2  -- ty2 is Fun or TyVar or TyCon
   = do { tvs2 <- getMetaTyVars [ty2]
        ; if tv1 `elem` tvs2 then
             occursCheckErr tv1 ty2
