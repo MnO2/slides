@@ -191,7 +191,7 @@ class: center, middle
 
 ``` haskell
 data Term = Var Name              -- x
-          | Lit Int               -- 3
+          | Lit BurgerType        -- burger
           | App Term Term         -- f x
           | Lam Name Term         -- \x -> x
 ```
@@ -219,7 +219,7 @@ data Term = Var Name              -- x
 
 ``` haskell
 data Term = Var Name              -- x
-          | Lit Int               -- 3
+          | Lit BurgerType        -- burger
           | App Term Term         -- f x
           | Lam Name Term         -- \x -> x
           | Ann Term Rho          -- (f x) :: Burger
@@ -695,9 +695,15 @@ tcRho (Ann body ann_ty) exp_ty
         ; instRho ann_ty exp_ty }
 ```
 
-* $fun\\_ty = var\\_ty_1 \rightarrow var\\_ty_2 \rightarrow Burger$
-* That is `Fun var_ty_1 (Fun var_ty_2 BurgerType)`
+* $body = var\\_ty_1 \rightarrow var\\_ty_2 \rightarrow Burger$.
 * And we have annotation `ann_ty` as $Bread \rightarrow Beef \rightarrow Burger$
+
+$$
+unify(var\\_ty_1 \rightarrow var\\_ty_2 \rightarrow Burger = Bread \rightarrow Beef \rightarrow Burger) \\\
+\Rightarrow unify(var\\_ty_1 = Bread) \cup unify(var\\_ty_2 \rightarrow Burger = Beef \rightarrow Burger) \\\
+\Rightarrow unify(var\\_ty_1 = Bread) \cup unify(var\\_ty_2 = Beef) \cup \\\ 
+unify(Burger = Burger) 
+$$
 
 ---
 
@@ -814,11 +820,11 @@ forall a b. a -> b -> Burger
 
 ``` haskell
 data Term = Var Name              -- x
-          | Lit Int               -- 3
+          | Lit BurgerType        -- burger
           | App Term Term         -- f x
           | Lam Name Term         -- \ x -> x
           | Let Name Term Term    -- let x = f y in x+1
-          | Ann Term Sigma        -- (f x) :: Int
+          | Ann Term Sigma        -- (f x) :: Burger
 ```
 
 * We add a "Let Name Term Term" here
@@ -877,8 +883,8 @@ data TyVar
 * The LHS instantiates the RHS
 
 $$
-\forall a. a \leq Int \\\
-\forall a. a \rightarrow a \leq Int \rightarrow Int \\\
+\forall a. a \leq Burger \\\
+\forall a. a \rightarrow a \leq Burger \rightarrow Burger \\\
 \forall a. a \rightarrow a \leq b \rightarrow b \\\
 \forall a. a \rightarrow a \leq c \rightarrow c \\\
 $$
@@ -1145,12 +1151,12 @@ makeBurgers make
 
 ``` haskell
 data Term = Var Name              -- x
-          | Lit Int               -- 3
+          | Lit BurgerType        -- burger
           | App Term Term         -- f x
           | Lam Name Term         -- \ x -> x
           | ALam Name Sigma Term  -- \ x -> x
           | Let Name Term Term    -- let x = f y in x+1
-          | Ann Term Sigma        -- (f x) :: Int
+          | Ann Term Sigma        -- (f x) :: Burger
 ```
 
 * Make $\rho$ could derive $\sigma \rightarrow \sigma$
