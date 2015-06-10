@@ -23,7 +23,7 @@
       .large p { font-size: 4em; }
 
       .large-picture img { width: 400px; }
-      .medium-picture img { width: 300px; }
+      .medium-picture img { width: 250px; }
       .small-picture img { width: 200px; }
       .tiny-picture img { width: 100px; }
     </style>
@@ -436,7 +436,12 @@ tcRho (App fun arg) exp_ty
 * Comparing to collecting constraints and solving them afterward, solving while walking is easier for explanation.
 * This function does two things: type expression expansion and unification.
 * `unify` the symbol `tau` with the formula of `a1 -> a2`
-* That is, Contraint $\tau = a1 \rightarrow a2$
+* Collect the Constraint
+
+$$
+\tau = a1 \rightarrow a2
+$$
+
 * We allocate type variables with `newTyVarTy`
 
 ``` haskell
@@ -444,7 +449,7 @@ unifyFun :: Rho -> Tc (Rho, Rho)
 unifyFun (Fun arg res) = return (arg,res)
 unifyFun tau           = do { arg_ty <- newTyVarTy
                             ; res_ty <- newTyVarTy
-                            ; unify tau (arg_ty --> res_ty)
+                            ; unify tau (Fun arg_ty res_ty)
                             ; return (arg_ty, res_ty) }
 ```
 
@@ -531,9 +536,7 @@ unify ty1 ty2 = failTc "Unable to unify types"
 
 .medium-picture[![slc-ex3](image/SLC_ex2.svg)]
 
-* `checkRho` do the typechecking for the argument
-* `instRho` writes the type back to the reference
-* We have this extra layer of abstraction is for the later extesion.
+* `checkRho` checks if the `arg` has `arg_ty` or not. Recursively call `tcRho` in typechecking mode.
 
 ``` haskell
 tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
@@ -551,8 +554,7 @@ checkRho expr ty = tcRho expr (Check ty)
 
 .medium-picture[![slc-ex3](image/SLC_ex2.svg)]
 
-* `checkRho` do the typechecking for the argument
-* `instRho` writes the type back to the reference
+* `instRho` writes the type back to the reference `res_ty`.
 * We have this extra layer of abstraction is for the later extesion.
 
 ``` haskell
@@ -584,68 +586,84 @@ instRho t1 (Check t2) = unify t1 t1
 instRho t1 (Infer r) = writeTcRef r t1
 ```
 
+
+---
+.medium-picture[![slc-ex3](image/SLC_ex4.svg)]
+
+``` haskell
+tcRho (Ann body ann_ty) exp_ty
+   = do { checkRho body ann_ty
+        ; instRho ann_ty exp_ty }
+```
+
+* Check if the `body` matches the `ann_ty`. It would run some unification in `Check` mode. We would see later.
+
 ---
 
-.medium-picture[![slc-ex4](image/SLC_ex4.svg)]
+.medium-picture[![slc-ex4](image/SLC_ex5.svg)]
 
 ``` haskell
 tcRho (Lam var body) (Infer ref)
   = do { var_ty  <- newTyVarTy
        ; body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
+       ; writeTcRef ref (Fun var_ty body_ty) }
 tcRho (Lam var body) (Check exp_ty)
   = do { (var_ty, body_ty) <- unifyFun exp_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 ```
 
-* We allocate a type variable for lambda argument, then using `extendVarEnv` to put a record marking the argument's type is `var_ty`. This term could be lookedup during the inference of `body`.
+* We allocate a type variable for lambda argument, then using `extendVarEnv` to put a record marking the argument's type is `var_ty`. This term could be looked-up during the inference of `body`.
+* VarEnv = $\left\\{ x = var\\_ty_1 \right\\}$
 
 ---
 
-.medium-picture[![slc-ex4](image/SLC_ex4.svg)]
+.medium-picture[![slc-ex4](image/SLC_ex5.svg)]
 
 ``` haskell
 tcRho (Lam var body) (Infer ref)
   = do { var_ty  <- newTyVarTy
        ; body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
+       ; writeTcRef ref (Fun var_ty body_ty) }
 tcRho (Lam var body) (Check exp_ty)
   = do { (var_ty, body_ty) <- unifyFun exp_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 ```
 
-* With the environment extended, we inference `body`, and put the inferred type `var_ty --> body_ty` into reference.
+* With the environment extended, we inference `body`, and put the inferred type `Fun var_ty body_ty` into reference.
 * If we are doing type checking, we just do the unification. For the separation of cases, it is also for the later extension.
-
----
-
-.medium-picture[![slc-ex6](image/SLC_ex5.svg)]
-
-``` haskell
-tcRho (Var v) exp_ty
-  = do { v_rho <- lookupVar v
-       ; instRho v_rho exp_ty }
-```
-
-* lookup the term `v` in the environment, and save it into `exp_ty`
 
 ---
 
 .medium-picture[![slc-ex6](image/SLC_ex6.svg)]
 
 ``` haskell
+tcRho (Var v) exp_ty
+  = do { v_rho <- lookupVar v
+       ; instRho v_rho exp_ty }
+```
+
+* VarEnv = $\left\\{ x = var\\_ty_1 \right\\}$
+* lookup the term `v` in the environment, and save it into `exp_ty`
+
+---
+
+.medium-picture[![slc-ex6](image/SLC_ex7.svg)]
+
+``` haskell
 tcRho (Lam var body) (Infer ref)
   = do { var_ty  <- newTyVarTy
        ; body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
+       ; writeTcRef ref (Fun var_ty body_ty) }
 tcRho (Lam var body) (Check exp_ty)
   = do { (var_ty, body_ty) <- unifyFun exp_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 ```
 
+* VarEnv = $\left\\{ x = var\\_ty_1, y = var\\_ty_2 \right\\}$
+
 ---
 
-.medium-picture[![slc-ex6](image/SLC_ex7.svg)]
+.medium-picture[![slc-ex6](image/SLC_ex8.svg)]
 
 ``` haskell
 tcRho (Var v) exp_ty
@@ -654,39 +672,69 @@ tcRho (Var v) exp_ty
 ```
 
 * lookup the term `v` in the environment, and save it into `exp_ty`
-
----
-
-.medium-picture[![slc-ex6](image/SLC_ex8.svg)]
-
-``` haskell
-tcRho (Lit _) exp_ty
-  = instRho BurgerType exp_ty
-```
-
-* Constant type is trivial.
+* VarEnv = $\left\\{ x = var\\_ty_1, y = var\\_ty_2 \right\\}$
 
 ---
 
 .medium-picture[![slc-ex6](image/SLC_ex9.svg)]
 
 ``` haskell
-tcRho (lit _) exp_ty
+tcRho (Lit _) exp_ty
   = instRho BurgerType exp_ty
 ```
 
-* constant type is trivial.
+* Constant type case is trivial, put the constant into `exp_ty`.
+
+
+---
+.medium-picture[![slc-ex3](image/SLC_ex4.svg)]
+
+``` haskell
+tcRho (Ann body ann_ty) exp_ty
+   = do { checkRho body ann_ty
+        ; instRho ann_ty exp_ty }
+```
+
+* $fun\\_ty = var\\_ty_1 \rightarrow var\\_ty_2 \rightarrow Burger$
+* That is `Fun var_ty_1 (Fun var_ty_2 BurgerType)`
+* And we have annotation `ann_ty` as $Bread \rightarrow Beef \rightarrow Burger$
 
 ---
 
 .medium-picture[![slc-ex6](image/SLC_ex10.svg)]
 
 ``` haskell
-tcRho (lit _) exp_ty
-  = instRho BurgerType exp_ty
+tcRho (Lit _) exp_ty
+  = instRho BreadType exp_ty
 ```
 
-* constant type is trivial.
+* Constant type case is trivial, put the constant into `exp_ty`.
+
+
+---
+.medium-picture[![slc-ex3](image/SLC_ex3.svg)]
+
+``` haskell
+tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
+                                ; (arg_ty, res_ty) <- unifyFun fun_ty
+                                ; checkRho arg arg_ty
+                                ; instRho res_ty exp_ty }
+```
+
+* Check the argument `checkRho arg Bread`
+* Then save `Beef -> Burger` to `exp_ty` with `instRho (Beef -> Burger) exp_ty`
+
+
+---
+
+.medium-picture[![slc-ex6](image/SLC_ex11.svg)]
+
+``` haskell
+tcRho (Lit _) exp_ty
+  = instRho BeefType exp_ty
+```
+
+* Constant type case is trivial, put the constant into `exp_ty`.
 
 
 ---
@@ -1130,7 +1178,7 @@ tcRho (ALam var var_ty body) (Check exp_ty)
 
 tcRho (ALam var var_ty body) (Infer ref)
   = do { body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (var_ty --> body_ty) }
+       ; writeTcRef ref (Fun var_ty body_ty) }
 ```
 
 
