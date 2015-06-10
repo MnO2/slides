@@ -309,14 +309,14 @@ c = Burger
 * Unification problem example
 
 $$
-T_1 \rightarrow T_1 * bool = (T_3 + int) \rightarrow T_2
+T_1 \rightarrow T_1  = Int \rightarrow T_2
 $$
 
 --
 
 * Then we have a solution 
 
-$$ \\{ T_1 \Rightarrow T_3 + int, \, T_2 \Rightarrow (T_3 + int) * bool \\} $$
+$$ \\{ T_1 \Rightarrow Int , \, T_2 \Rightarrow Int \\} $$
 
 --
 
@@ -1234,10 +1234,11 @@ $$
 * However, are these two types equivalent?
 
 $$
-\forall a. a \rightarrow \forall b.b \rightarrow b \\\
 \forall ab. a \rightarrow b \rightarrow b \\\
+\forall a. a \rightarrow \forall b.b \rightarrow b \\\
 $$
 
+* The first could not instantiate the second.
 * They should be isomorphic. The hindley milner could infer the type with forall looks like the first one. But what if we annotate the type as the second one. How to get these two be equivalent by extending the existing rules?
 
 
@@ -1307,7 +1308,6 @@ $$
 
 * How do we tell if one of the polytype could subsume another?
 * First we skolemize it, and see if the other polytype could instantiate the `Rho` part.
-* It checks if `sigma2` is at least as polymorphic as `sigma1 -> exp`
 
 ``` haskell
 subsCheck :: Sigma -> Sigma -> Tc ()
@@ -1316,7 +1316,12 @@ subsCheck sigma1 sigma2
        ; subsCheckRho sigma1 rho2
        ; esc_tvs <- getFreeTyVars [sigma1, sigma2]
        ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+       ; assert (null bad_tvs) (failTc "Subsumption failed")
 ```
+
+* For example, the annotation `sigma2` is $\forall a. a \rightarrow \forall b. b$ and inferred type is $\forall a b. a \rightarrow b$
+* Then `skol_tvs` is `[a, b]` and `rho2` is $a \rightarrow b$
+* We see $\forall a b. a \rightarrow b$ could instantiate $a \rightarrow b$
 
 ---
 
@@ -1339,6 +1344,8 @@ subsCheckRho tau1 tau2
 subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
 subsCheckFun a1 r1 a2 r2 = do { subsCheck a2 a1; subsCheckRho r1 r2 }
 ```
+
+* With subsuption rule added, the argument annotation unification could be handled.
 
 ---
 
