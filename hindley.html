@@ -885,8 +885,8 @@ data TyVar
 $$
 \forall a. a \leq Burger \\\
 \forall a. a \rightarrow a \leq Burger \rightarrow Burger \\\
-\forall a. a \rightarrow a \leq b \rightarrow b \\\
-\forall a. a \rightarrow a \leq c \rightarrow c \\\
+\forall a. a \rightarrow a \leq b_1 \rightarrow b_1 \\\
+\forall a. a \rightarrow a \leq c_1 \rightarrow c_1 \\\
 $$
 
 
@@ -907,7 +907,7 @@ $$
 \forall a_1. a_1 \rightarrow \forall a_2. a_2  \Rightarrow  \forall a_1. \tau_1 \rightarrow \forall a_2. a_2
 $$
 
-* We split `instSigma` in two cases is for later higher-rank extension.
+* Then
 
 ``` haskell
 instRho :: Rho -> Expected Rho -> Tc ()
@@ -971,7 +971,7 @@ inferSigma e
         ; quantify forall_tvs exp_ty }
 ```
 
-* With $a_1$ bound by outer scopes, and we would like to generalize $b_1$. We add a $\forall$ to close over $b$.
+* With knowing that $a_1$ is bound by outer scopes, so we skip it. Ans since we would like to generalize $b_1$. We add a $\forall$ to close over $b$.
 
 $$
 b_1 \rightarrow a_1
@@ -1031,9 +1031,11 @@ tcRho (Let var rhs body) exp_ty
        ; extendVarEnv var var_ty (tcRho body exp_ty) }
 ```
 
+* VarEnv = $\left\\{ f = \forall a b. a \rightarrow b \rightarrow Burger \right\\}$
+
 ---
 
-.medium-picture[![slc-ex6](image/let_ex13.svg)]
+.medium-picture[![slc-ex6](image/let_ex3.svg)]
 
 * When bumping into a `App`, we no longer use `checkRho` or `instRho`. The polytype version .blue[`checkSigma`] and .blue[`instSigma`] would typecheck the argument see if the function argument type could subsume the input argument type. And `instSigma` would instantiate the function return type to the expected type of `App`
 
@@ -1045,20 +1047,22 @@ tcRho (App fun arg) exp_ty
        ; instSigma res_ty exp_ty }
 ```
 
+
 ---
 
-.medium-picture[![slc-ex6](image/let_ex13.svg)]
-
-* For contant case, it is also no longer a simple saving, but has to instantiate the constant type.
+.medium-picture[![slc-ex6](image/let_ex4.svg)]
 
 ``` haskell
-tcRho (Lit _) exp_ty
-  = instSigma intType exp_ty
+tcRho (App fun arg) exp_ty
+  = do { fun_ty <- inferRho fun
+       ; (arg_ty, res_ty) <- unifyFun fun_ty
+       ; checkSigma arg arg_ty
+       ; instSigma res_ty exp_ty }
 ```
 
 ---
 
-.medium-picture[![slc-ex6](image/let_ex13.svg)]
+.medium-picture[![slc-ex6](image/let_ex5.svg)]
 
 * for `Var` case, the instantiation also has to be applied.
 
@@ -1067,6 +1071,20 @@ tcRho (Var v) exp_ty
   = do { v_sigma <- lookupVar v
        ; instSigma v_sigma exp_ty }
 ```
+
+* VarEnv = $\left\\{ f = \forall a b. a \rightarrow b \rightarrow Burger \right\\}$
+
+---
+
+.medium-picture[![slc-ex6](image/let_ex6.svg)]
+
+* For contant case, it is also no longer a simple saving, but has to instantiate the constant type.
+
+``` haskell
+tcRho (Lit _) exp_ty
+  = instSigma BreadType exp_ty
+```
+
 
 * For annotation, we would check if the marked annotation could subsume the type of the `body`, if it does, then using annotation type to instantiate expected type.
 
