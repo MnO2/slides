@@ -596,7 +596,7 @@ tcRho (Ann body ann_ty) exp_ty
         ; instRho ann_ty exp_ty }
 ```
 
-* Check if the `body` matches the `ann_ty`. It would run some unification in `Check` mode. We would see later.
+* Check if the `body` matches the `ann_ty`. It would run unification in `Check` mode. We would see later.
 
 ---
 
@@ -983,6 +983,27 @@ $$
 \forall b. b \rightarrow a_1
 $$
 
+
+---
+
+## Generalization
+
+* It is tricky when it comes to comparing polytypes. That is we would like to generalize `checkRho` to `checkSigma`.
+* Say the RHS is the annotated type, and the left hand side is the inferred type. $\leq$ means instantiation.
+
+$$
+\forall a b. a \rightarrow b \leq \forall c. c \rightarrow c
+$$
+
+* A trick is to replace $\forall$ to type variable with previosly unseen name, and use the vanilla `checkRho` to see if it is unifiable.
+
+$$
+\forall a b. a \rightarrow b \leq c_1 \rightarrow c_1
+$$
+
+* Also we have to check if any of the type variables replaced escape to the outer scope.
+
+
 ---
 
 ## Generalization
@@ -1003,13 +1024,13 @@ checkSigma expr sigma
      ; esc_tvs <- getFreeTyVars (sigma : env_tys)
      ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
      ; assert (null bad_tvs) "Type not polymorphic enough" }
+
+skolemise :: Sigma -> Tc ([TyVar], Rho)
+skolemise (ForAll tvs ty)
+  = do { sks1 <- mapM newSkolemTyVar tvs
+       ; ty' <- substTy tvs (map TyVar sks1) ty
+       ; return (sks1, ty') }
 ```
-
-* Check if any of `skol_tvs` escape as free variables in the outer scope. Here the $c_1$ is escaped.
-$$
-\forall a_1. a_1 \rightarrow \forall b. b \rightarrow a_1 \rightarrow c_1
-$$
-
 
 ---
 
