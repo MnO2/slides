@@ -229,7 +229,7 @@ data Term = Var Name              -- x
           | Ann Term Rho          -- (f x) :: Burger
 ```
 
-* Label it!  .small-picture[![](image/label-it.jpg)]
+* Label it!  .tiny-picture[![](image/burger-king.png)]
 
 * Given a built-in rule (We, the programmer as the oracle, declare this as the .blue[Hamburger Making theorem].)
 
@@ -255,7 +255,7 @@ $$
 .tiny-picture[![](image/big-mac-bread.jpg)]
 .tiny-picture[![](image/big-mac-beef.jpg)]
 =====>
-.small-picture[![](image/label-it.jpg)]
+.tiny-picture[![](image/burger-king.png)]
 
 * With human brains, we could see the answer in a glance, but how to derive an algorithm?
 
@@ -432,6 +432,7 @@ inferRho expr
 ``` haskell
 tcRho (App fun arg) exp_ty
   = do { fun_ty <- inferRho fun
+-- supposing that we have inferred the definition of fun
        ; (arg_ty, res_ty) <- unifyFun fun_ty
        ; ....
        }
@@ -445,8 +446,8 @@ tcRho (App fun arg) exp_ty
 
 ## Robinson's Unification Algorithm in Action
 
-* Comparing to collecting constraints and solving them afterward, solving while walking is easier for explanation.
 * This function does two things: .blue[type expression expansion] and .blue[unification].
+* .blue[unify] means trying to make the both sides of the equation (structurally) equal.
 * `unify` the symbol `tau` with the formula of `a1 -> a2`
 * Collect the Constraint
 
@@ -461,8 +462,13 @@ unifyFun :: Rho -> Tc (Rho, Rho)
 unifyFun (Fun arg res) = return (arg,res)
 unifyFun tau           = do { arg_ty <- newTyVarTy
                             ; res_ty <- newTyVarTy
+
+-- recursively call unify tau (arg_ty --> res_ty) to see if it results to error.
                             ; unify tau (Fun arg_ty res_ty)
-                            ; return (arg_ty, res_ty) }
+
+-- it is fine. tau has been substituted with arg_ty --> res_ty
+                            ; return (arg_ty, res_ty) 
+                            }
 ```
 
 ---
@@ -474,8 +480,13 @@ unifyFun tau           = do { arg_ty <- newTyVarTy
 ``` haskell
 unify :: Tau -> Tau -> Tc ()
 unify (Fun arg1 res1) (Fun arg2 res2)
+
+-- see if unify arg1 arg2 would result errors
   = do { unify arg1 arg2
-       ; unify res1 res2 }
+
+-- see if unify res1 res2 would result errors
+       ; unify res1 res2 
+       }
 ```
 
 $$
@@ -496,16 +507,22 @@ type TyRef = IORef (Maybe Tau)
 
 
 unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
+
+
+-- we are unifying meta type var with tau
 unify (MetaTv tv) ty = unifyVar tv ty
 unify ty (MetaTv tv) = unifyVar tv ty
 ```
 
 ``` haskell
+-- we should unify where the meta type var points to with tau
 unifyVar :: MetaTv -> Tau -> Tc ()
 unifyVar tv1 ty2
   = do { mb_ty1 <- readTv tv1
        ; case mb_ty1 of
            Just ty1 -> unify ty1 ty2
+
+-- this case is reserved for later hindley-milner
            Nothing  -> failTc "MetaTv is always initialized with Just here." }
 ```
 
@@ -526,7 +543,7 @@ $$
 
 --
 
-* If they are type variables, check if their "names" are the same. That is "a1 = a1". "a1" and "a2" are not equal. It is confusing but you would see it when we add the generalization part.
+* If they are type variables, check if their .blue[names] are the same. That is .blue[a1 = a1], but .blue[a1 != a2]. It is confusing but you would see it when we add the generalization for hindley-milner.
 
 ``` haskell
 unify (TyVar tv1)  (TyVar tv2)  | tv1 == tv2 
@@ -553,6 +570,8 @@ unify ty1 ty2 = failTc "Unable to unify types"
 ``` haskell
 tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
                                 ; (arg_ty, res_ty) <- unifyFun fun_ty
+-- arg_ty is the expected accepted type by function definition
+-- At App phase we have to check if the arg matches arg_ty
                                 ; checkRho arg arg_ty
                                 ; instRho res_ty exp_ty }
 
@@ -573,10 +592,13 @@ checkRho expr ty = tcRho expr (Check ty)
 tcRho (App fun arg) exp_ty = do { fun_ty <- inferRho fun
                                 ; (arg_ty, res_ty) <- unifyFun fun_ty
                                 ; checkRho arg arg_ty
+
+-- save the res_ty into the slot of exp_ty
+-- otherwise, see if res_ty matches the expected exp_ty type
                                 ; instRho res_ty exp_ty }
 
 instRho :: Rho -> Expected Rho -> Tc ()
-instRho t1 (Check t2) = unify t1 t1
+instRho t1 (Check t2) = unify t1 t2
 instRho t1 (Infer r) = writeTcRef r t1
 ```
 
@@ -605,10 +627,11 @@ instRho t1 (Infer r) = writeTcRef r t1
 ``` haskell
 tcRho (Ann body ann_ty) exp_ty
    = do { checkRho body ann_ty
-        ; instRho ann_ty exp_ty }
+        ; instRho ann_ty exp_ty 
+        }
 ```
 
-* Check if the `body` matches the `ann_ty`. It would run unification in `Check` mode. We would see later.
+* Check if the `body` matches the `ann_ty`.
 
 ---
 
@@ -617,32 +640,28 @@ tcRho (Ann body ann_ty) exp_ty
 ``` haskell
 tcRho (Lam var body) (Infer ref)
   = do { var_ty  <- newTyVarTy
+-- given symbol var inferred as var_ty, infer the body
        ; body_ty <- extendVarEnv var var_ty (inferRho body)
+-- write the type back
        ; writeTcRef ref (Fun var_ty body_ty) }
-tcRho (Lam var body) (Check exp_ty)
-  = do { (var_ty, body_ty) <- unifyFun exp_ty
-       ; extendVarEnv var var_ty (checkRho body body_ty) }
 ```
 
 * We allocate a type variable for lambda argument, then using `extendVarEnv` to put a record marking the argument's type is `var_ty`. This term could be looked-up during the inference of `body`.
 * VarEnv = $\left\\{ x = var\\_ty_1 \right\\}$
+* With the environment extended, we inference `body`, and put the inferred type `Fun var_ty body_ty` into reference.
 
 ---
 
 .medium-picture[![slc-ex4](image/SLC_ex5.svg)]
 
 ``` haskell
-tcRho (Lam var body) (Infer ref)
-  = do { var_ty  <- newTyVarTy
-       ; body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (Fun var_ty body_ty) }
 tcRho (Lam var body) (Check exp_ty)
   = do { (var_ty, body_ty) <- unifyFun exp_ty
-       ; extendVarEnv var var_ty (checkRho body body_ty) }
+       ; extendVarEnv var var_ty (checkRho body body_ty) 
+       }
 ```
 
-* With the environment extended, we inference `body`, and put the inferred type `Fun var_ty body_ty` into reference.
-* If we are doing type checking, we just do the unification. For the separation of cases, it is also for the later extension.
+* If we are doing type checking, we are using `unifyFun` to expand `exp_ty` into the structure of `var_ty --> body_ty`. then using `checkRho` to do typechecking.
 
 ---
 
@@ -651,7 +670,8 @@ tcRho (Lam var body) (Check exp_ty)
 ``` haskell
 tcRho (Var v) exp_ty
   = do { v_rho <- lookupVar v
-       ; instRho v_rho exp_ty }
+       ; instRho v_rho exp_ty 
+       }
 ```
 
 * VarEnv = $\left\\{ x = var\\_ty_1 \right\\}$
@@ -784,8 +804,7 @@ inferRho expr
 * Finally we get the whole program's type
 
 ``` haskell
-typecheck :: Term -> Tc Rho
-typecheck e = inferRho e
+inferRho :: Term -> Tc Rho
 ```
 
 --
@@ -802,7 +821,7 @@ typecheck e = inferRho e
 
 
 ``` haskell
-(\f -> ((f bread meat), (f rice prawn)) ) (make)
+( \f. Pair2 ((f bread) meat) ((f rice) prawn) ) make
 ```
 
 
@@ -810,14 +829,16 @@ typecheck e = inferRho e
 
 ## The defect of simply typed lambda calculus
 
-* The trick discovered by Hindley and Milner independently is to add a "let" into grammar
-* It's called Let polymorphism.
+* The trick discovered by Hindley and Milner independently is to add a .blue[let] into grammar
+* It's called .blue[Let polymorphism].
 
 ``` haskell
-let f = make in ((f bread meat), (f rice prawn))
+let f = make in Pair2 ((f bread) meat) ((f rice) prawn)
 ```
 
-* The type system is also generalized. For the language to describe "type" (type expression) is added with polytype, that is `forall a. a`
+* The type system is also generalized. For the language to describe "type" is added with .blue[polytype], that is `forall a. a`
+
+* Think it like a blank label and filling it with anything you like.  .small-picture[![](image/label-it.jpg)]
 
 ``` haskell
 forall a b. a -> b -> Burger
@@ -834,12 +855,12 @@ forall a b. a -> b -> Burger
 data Term = Var Name              -- x
           | Lit BurgerType        -- burger
           | App Term Term         -- f x
-          | Lam Name Term         -- \ x -> x
+          | Lam Name Term         -- \ x. x
           | Let Name Term Term    -- let x = f y in x+1
           | Ann Term Sigma        -- (f x) :: Burger
 ```
 
-* We add a "Let Name Term Term" here
+* We add a .blue[Let Name Term Term] here
 * Polytypes are types containing variables bound by one or more for-all quantifiers
 
 $$
@@ -860,23 +881,24 @@ $$
 \tau ::= \tau \rightarrow \tau \, | \, ConstantType \\\
 $$
 
-* We add another meta variable "Sigma" for type level expansion.
-* And "BoundTv" to capture the "forall" polytype.
+* We add another meta variable .blue[Sigma] for type level expansion.
+* And "BoundTv" to capture the .blue[forall] polytype.
 
 ``` haskell
 type Sigma = Type
-type Rho   = Type›  -- No top-level ForAll
-type Tau   = Type›  -- No ForAlls anywhere
+type Rho   = Type  -- No top-level ForAll
+type Tau   = Type
 
-data Type = ForAll [TyVar] Rho›   -- Forall type
-    ›     | Fun    Type Type ›    -- Function type
-    ›     | TyCon  TyCon      ›   -- Type constants
-    ›     | TyVar  TyVar      ›   -- Always bound by a ForAll
-    ›     | MetaTv MetaTv     ›   -- A meta type variable
+data Type = ForAll [TyVar] Rho   -- Forall type
+          | Fun    Type Type     -- Function type
+          | TyCon  TyCon         -- Type constants
+          | TyVar  TyVar         -- Always bound by a ForAll
+          | MetaTv MetaTv        -- A meta type variable
 
 data TyVar
-  = BoundTv String› ›       -- A type variable bound by a ForAll
-  | SkolemTv String Uniq›   -- A skolem constant; the String is•
+  = BoundTv String               -- A type variable bound by a ForAll
+  | SkolemTv String Uniq
+-- Like the "a1", "a2", "a3" you see in GHC compiler message
 ```
 
 
@@ -884,11 +906,11 @@ data TyVar
 
 ## Instantiation
 
-* With the polytype introduced, a corresponding concept is introduced, it's called instantiation.
+* With the polytype introduced, a corresponding concept is introduced, it's called .blue[instantiation].
 
 --
 
-* It's replacing "type variable" identified by "schema" with a fresh "type variable" or "type constant"
+* It's replacing .blue[type variable] captured by a .blue[forall] with a fresh solo .blue[type variable] or .blue[type constant]
 
 --
 
@@ -901,12 +923,13 @@ $$
 \forall a. a \rightarrow a \leq c_1 \rightarrow c_1 \\\
 $$
 
+You could instantiate a blank label .small-picture[![](image/label-it.jpg)] to .tiny-picture[![](image/burger-king.png)]
 
 ---
 
 ## Instantiation
 
-* Substitute the type variable appears in the topmost `forall`, with newly instantiated type variables, they are not the same from any other type variables.
+* Substitute the type variable appears in the topmost `forall`, with newly instantiated type variables, they have unique names different from others.
 
 ``` haskell
 instantiate :: Sigma -> Tc Rho
@@ -916,7 +939,7 @@ instantiate ty = return ty
 ```
 
 $$
-\forall a_1. a_1 \rightarrow \forall a_2. a_2  \Rightarrow  \forall a_1. \tau_1 \rightarrow \forall a_2. a_2
+\forall a_1 a_2. a_1 \rightarrow a_2  \Rightarrow  \tau_1 \rightarrow \tau_2
 $$
 
 * Then
@@ -941,8 +964,8 @@ instSigma t1 (Infer r)  = do { t1' <- instantiate t1
 
 ## Generalization
 
-* Another concept introduced is called "generalization".
-* It's replacing a "type variable" with a "polytype". Think it like replacing a simple function in C++ and generalize it with a C++ template function.
+* Another concept introduced is called .blue[generalization].
+* It's replacing a .blue[type variable] with a .blue[polytype]. Think it like replacing a simple function in C++ and generalize it with a C++ template function.
 
 ``` haskell
 inferRho expr
@@ -960,6 +983,7 @@ inferSigma e
         ; env_tys <- getEnvTypes
         ; env_tvs <- getMetaTyVars env_tys
         ; res_tvs <- getMetaTyVars [exp_ty]
+-- excluding the symbols that have been bound in outer scope
         ; let forall_tvs = res_tvs \\ env_tvs
         ; quantify forall_tvs exp_ty }
 ```
@@ -979,11 +1003,12 @@ inferSigma e
         ; env_tys <- getEnvTypes
         ; env_tvs <- getMetaTyVars env_tys
         ; res_tvs <- getMetaTyVars [exp_ty]
+-- excluding the symbols that have been bound in outer scope
         ; let forall_tvs = res_tvs \\ env_tvs
         ; quantify forall_tvs exp_ty }
 ```
 
-* With knowing that $a_1$ is bound by outer scopes, so we skip it. Ans since we would like to generalize $b_1$. We add a $\forall$ to close over $b$.
+* With knowing that $a_1$ is bound by outer scopes, so we skip it. And since we would like to generalize $b_1$. We add a $\forall$ to close over $b$.
 
 $$
 b_1 \rightarrow a_1
@@ -995,13 +1020,14 @@ $$
 \forall b. b \rightarrow a_1
 $$
 
+Wipe out .tiny-picture[![](image/burger-king.png)] to be blank label .tiny-picture[![](image/label-it.jpg)] 
 
 ---
 
 ## Generalization
 
-* It is tricky when it comes to comparing polytypes. That is we would like to generalize `checkRho` to `checkSigma`.
-* Say the RHS is the annotated type, and the left hand side is the inferred type. $\leq$ means instantiation.
+* It is tricky when it comes to comparing polytypes. That somehow complicates the generalization from `checkRho` to `checkSigma`.
+* Say the RHS is the annotated type, and the left hand side is the inferred type. $\leq$ means "more polymorphic".
 
 $$
 \forall a b. a \rightarrow b \leq \forall c. c \rightarrow c
@@ -1030,13 +1056,20 @@ Becomes
 ``` haskell
 checkSigma :: Term -> Sigma -> Tc ()
 checkSigma expr sigma
+
 = do { (skol_tvs, rho) <- skolemise sigma
+
+-- now rho is ordinary case we demonstrated before
      ; checkRho expr rho
+
+-- the rest is for occursCheck
+-- making sure no free var escape
      ; env_tys <- getEnvTypes
      ; esc_tvs <- getFreeTyVars (sigma : env_tys)
      ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
      ; assert (null bad_tvs) "Type not polymorphic enough" }
 
+-- replace type var bound by forall with a newly created unique type var
 skolemise :: Sigma -> Tc ([TyVar], Rho)
 skolemise (ForAll tvs ty)
   = do { sks1 <- mapM newSkolemTyVar tvs
@@ -1049,7 +1082,7 @@ skolemise (ForAll tvs ty)
 .medium-picture[![slc-ex6](image/let_ex1.svg)]
 
 ``` haskell
-let f = \x -> \y -> burger in ((f bread) meat)
+let f = \x. \y. burger in ((f bread) meat)
 ```
 
 ---
@@ -1070,7 +1103,7 @@ tcRho (Let var rhs body) exp_ty
 
 .medium-picture[![slc-ex6](image/let_ex3.svg)]
 
-* When bumping into a `App`, we no longer use `checkRho` or `instRho`. The polytype version .blue[`checkSigma`] and .blue[`instSigma`] would typecheck the argument see if the function argument type could subsume the input argument type. And `instSigma` would instantiate the function return type to the expected type of `App`
+* When bumping into a `App`, we no longer use `checkRho` or `instRho`. The polytype version .blue[`checkSigma`] and .blue[`instSigma`] would typecheck the argument see if the input argument type could subsume the function argument type. And `instSigma` would instantiate the function return type to the expected type of `App`
 
 ``` haskell
 tcRho (App fun arg) exp_ty
@@ -1140,6 +1173,7 @@ unifyVar tv1 ty2
   = do { mb_ty1 <- readTv tv1
        ; case mb_ty1 of
            Just ty1 -> unify ty1 ty2
+-- The case we reserved before now has to be considered.
            Nothing  -> unifyUnboundVar tv1 ty2 }
 ```
 
@@ -1165,10 +1199,10 @@ unifyUnboundVar tv1 ty2  -- ty2 is Fun or TyVar or TyCon
 
 ## What's the defect of hindley-milner type system?
 
-* Even with the addition of "let", it only tells the system to "generalize" at the syntax where "let" happened.
+* Even with the addition of .blue[let], it only tells the system to "generalize" at the syntax where "let" happened.
 
 ```haskell
-(\f -> (f "foo", f 13)) (\x -> x)
+(\f. Pair2 (f "foo") (f 13)) (\x. x)
 ```
 
 * Consider the following use case. We want to have the `make` be passed in `makeBurgers` function
@@ -1177,10 +1211,10 @@ unifyUnboundVar tv1 ty2  -- ty2 is Fun or TyVar or TyCon
 make :: forall a b. a -> b -> Burger
 
 makeBurgers :: (forall a b. a -> b -> Burger) -> (Burger, Burger)
-makeBurgers g = let f x = (x bread beef, x rice prawn)
-                 in f g
+makeBurgers g = let f x = Pair2 ((x bread) beef) ((x rice) prawn)
+                in f g
 
-makeBurgers make
+h = makeBurgers make
 ```
 
 * It would not typecheck of hindley-milner, since the `makeBurgers`'s forall is not at the top level.
@@ -1193,6 +1227,8 @@ makeBurgers make
 
 * We add a type annotation to help the type system to generalize at the argument, without a big change in hindley-milner type system.
 
+* Adding a little burden to programmers, but without greatly overhaul the whole system.
+
 
 ---
 
@@ -1204,8 +1240,8 @@ makeBurgers make
 data Term = Var Name              -- x
           | Lit BurgerType        -- burger
           | App Term Term         -- f x
-          | Lam Name Term         -- \ x -> x
-          | ALam Name Sigma Term  -- \ x -> x
+          | Lam Name Term         -- \x. x
+          | ALam Name Sigma Term  -- \x :: Burger . x
           | Let Name Term Term    -- let x = f y in x+1
           | Ann Term Sigma        -- (f x) :: Burger
 ```
@@ -1223,7 +1259,7 @@ $$
 
 ## Change in Inference
 
-* For inference, it is intuitive. Extend the environment by marking `var` with `var_ty`, and do the inference for `body`
+* For inference, it is intuitive. Extend the environment by marking `var` with `var_ty`, which is the annotated type, then do the inference for `body`
 * For type checking, a special case we have to deal with, that is determining if a type expression covers another type expression. In academic terminology, it is called "subsumption".
 * Denoted by `subsCheck`
 
@@ -1238,17 +1274,26 @@ tcRho (ALam var var_ty body) (Infer ref)
        ; writeTcRef ref (Fun var_ty body_ty) }
 ```
 
+* Why do we need subsCheck?
+--
+
+* Because programmers could annotate the type in one form but the inferred form is kind of different.
 
 ---
 
 ## Subsumption
 
-* Determine if a poly type expression could actually be incorporated into another poly type expression.
-
+* With the $\sigma$ could be in the function argument, we have to extend the rule to compare two polytype expressions.
 * Notice that the type expression inferred by hindley milner, it would only look like this:
 
 $$
 \forall a. a \rightarrow \forall b.b \rightarrow \forall c.c \rightarrow c
+$$
+
+or 
+
+$$
+\forall a b c. a \rightarrow b \rightarrow c \rightarrow c
 $$
 
 but not
