@@ -193,8 +193,9 @@ class: center, middle
 data Term = Var Name              -- x
           | Lit BurgerType        -- burger
           | App Term Term         -- f x
-          | Lam Name Term         -- \x -> x
+          | Lam Name Term         -- \x. x
 ```
+
 
 --
 * I would really love to call this language as .blue["System Mc"], but that is actually a misnomer. Its name is .blue[lambda calculus].
@@ -202,14 +203,16 @@ data Term = Var Name              -- x
 
 --
 
-![](image/burger_lambda.jpg)
+.medium-picture[![](image/burger_lambda.jpg)]
 
 ``` haskell
-(\x -> \y -> burger) bread beef
+(\x. \y. burger) bread beef
 ```
 
 --
-* It's unsafe. You could put anything into the x, y and makes it a burger. (Cockroach?)
+* It's unsafe. You could put anything into the x, y and makes it a burger.
+
+.tiny-picture[![](image/cockroach.jpg)]
 
 ---
 
@@ -217,14 +220,18 @@ data Term = Var Name              -- x
 
 * Therefore we extend this language, to add type annotation: .blue[x :: Burger] 
 
+
 ``` haskell
 data Term = Var Name              -- x
           | Lit BurgerType        -- burger
           | App Term Term         -- f x
-          | Lam Name Term         -- \x -> x
+          | Lam Name Term         -- \x. x
           | Ann Term Rho          -- (f x) :: Burger
 ```
-* Given a built-in rule (We, the programmer as the oracle, declare this as the Hamburger Making theorem.)
+
+* Label it!  .small-picture[![](image/label-it.jpg)]
+
+* Given a built-in rule (We, the programmer as the oracle, declare this as the .blue[Hamburger Making theorem].)
 
 $$
 make :: Bread \rightarrow Beef \rightarrow Burger
@@ -233,7 +240,7 @@ $$
 * Then we could check if this program follows the rule of the theorem.
 
 ``` haskell
-((\x -> \y -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x. \y. burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 
@@ -241,7 +248,15 @@ $$
 
 ## It's not only for type checking.
 
-* Because the rule is not ambiguous, we could run the rule checking "backward" to learn the type of a term, with all the constant's type known.
+* Because the rule is not ambiguous, we could run the rule checking .blue[backward] to learn the type of a term, with all the constant's type known.
+
+* It's like guessing the labels with the values given.
+
+.tiny-picture[![](image/big-mac-bread.jpg)]
+.tiny-picture[![](image/big-mac-beef.jpg)]
+=====>
+.small-picture[![](image/label-it.jpg)]
+
 * With human brains, we could see the answer in a glance, but how to derive an algorithm?
 
 * Rule:
@@ -252,19 +267,17 @@ $$
 * Missing types of `x` and `y`
 
 ``` haskell
-((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? . \y: ??? . burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ---
 
 ## Let's get started from fuzzy idea
 
-* We would like to have a `typecheck` function, when given a value level `Term` expression, return an inferred `Rho` type. And since the inference involves some states, we have to put it in a Monad `Tc`.
-* `typecheck` calls `inferRho` to states its implementation.
+* We would like to have a `inferRho` function, when given a value level `Term` expression, return an inferred `Rho` type. And since the inference involves some states, we have to put it in a Monad `Tc`.
 
 ``` haskell
-typecheck :: Term -> Tc Rho
-typecheck e = inferRho e
+inferRho :: Term -> Tc Rho
 ```
 
 --
@@ -272,13 +285,12 @@ typecheck e = inferRho e
 * We allocate a "type variable", and leave the `tcRho` to fill out the type variable and read it afterward. We also put it in another type to mark that we are doing "inference".
 
 ``` haskell
-inferRho :: Term -> Tc Rho
 inferRho expr
   = do { ref <- newTcRef (error "inferRho: empty result")
        ; tcRho expr (Infer ref)
        ; readTcRef ref }
 ```
-* Then what's next and our goal?
+* Then what's next?
 
 ---
 
@@ -288,7 +300,7 @@ inferRho expr
 * Notice that we could write down some equations when seeing the formula. Then we could solve the eqautions like high-school algebra.
 
 ``` haskell
-((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? . \y: ??? . burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ``` haskell
@@ -338,31 +350,30 @@ c = Burger
 
 ## Formulation: Type variable expansion
 
-* But notice that we don't have "type variable" either in the syntax or parsed abstract syntax tree.
+* But notice that we don't have .blue[type variable] `a`, `b`, `c`, etc. either in the syntax or parsed abstract syntax tree.
 
 ``` haskell
-((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? . \y: ??? . burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 --
 
-* We have to figure out a way to generate the "type variables". In more complicated cases it also comes with arrow (->), and it makes up a "type expression".
+* We have to figure out a way to generate the .blue[type variables]. In more complicated cases it also comes with arrow (->), and it makes up a .blue[type expression].
 
 --
 
-* Grammar for type variable expansion in type inference.
+* Grammar for type variable expansion.
 
 $$
 \rho ::= \tau \\\
 \tau ::= \tau \rightarrow \tau \, \vert \, ContantType \\\
 $$
 
-* With this grammar, we have the "meta type variable" for expanding type expressions.
-* That is the `Rho` we mentioned.
+* Example
+$$ \rho \Rightarrow \tau \rightarrow \tau \Rightarrow \tau \rightarrow \tau \rightarrow \tau \Rightarrow Int \rightarrow Int \rightarrow Int $$
 
-``` haskell
-inferRho :: Term -> Tc Rho
-```
+* With this grammar, we have the .blue[meta type variable] for expanding type expressions,  And that is the `Rho` we mentioned in `inferRho`.
+
 
 ---
 ## Formulation: Type variable expansion
@@ -372,16 +383,19 @@ $$
 \tau ::= \tau \rightarrow \tau \, \vert \, ContantType \\\
 $$
 
-* And now we have the "type expression" defined.
+* And now we have the .blue[type expression] defined in Haskell.
 
 ``` haskell
 type Rho   = Type
 type Tau   = Type
 
-data Type = Fun    Type Type ›    -- Function type
-    ›     | TyCon  TyCon      ›   -- Type constants
-    ›     | TyVar  TyVar      ›   -- Type variable with name
-    ›     | MetaTv MetaTv     ›   -- A meta type variable
+data Type = Fun    Type Type     -- Function type
+          | TyCon  TyCon         -- Type constants
+          | TyVar  TyVar         -- Type variable with name
+          | MetaTv MetaTv        -- A meta type variable
+
+data TyVar = SkolemTv String Uniq
+-- Like the "a1", "a2", "a3" you see in GHC compiler message
 
 data MetaTv = Meta Uniq TyRef  -- Can unify with any tau-type
 
@@ -389,8 +403,6 @@ type TyRef = IORef (Maybe Tau)
         -- 'Nothing' means the type variable is not substituted
         -- 'Just ty' means it has been substituted by 'ty'
 
-data TyVar
-  = SkolemTv String Uniq›   -- Like the "a1", "a2", "a3" you see in GHC compiler message
 ```
 
 --
@@ -401,7 +413,7 @@ data TyVar
 ## Tree Walking
 
 ``` haskell
-((\x: ??? -> \y: ??? -> burger) :: Bread -> Beef -> Burger) bread) beef
+((\x: ??? . \y: ??? . burger) :: Bread -> Beef -> Burger) bread) beef
 ```
 
 ``` haskell
@@ -434,7 +446,7 @@ tcRho (App fun arg) exp_ty
 ## Robinson's Unification Algorithm in Action
 
 * Comparing to collecting constraints and solving them afterward, solving while walking is easier for explanation.
-* This function does two things: type expression expansion and unification.
+* This function does two things: .blue[type expression expansion] and .blue[unification].
 * `unify` the symbol `tau` with the formula of `a1 -> a2`
 * Collect the Constraint
 
