@@ -150,7 +150,9 @@ class: center, middle
 ## Using predicate logic as lightly as possible
 
 * .red[This talk tries to derive it from intuition and examples.]
+
 * Trade off exactnesss for easier comprehension.
+
 * We would start from the simplified one then move to the harder ones.
 
 ---
@@ -158,7 +160,9 @@ class: center, middle
 ## Using predicate logic as lightly as possible
 
 * This talk tries to derive it from intuition and examples.
+
 * .red[Trade off exactnesss for easier comprehension.]
+
 * We would start from the simplified one then move to the harder ones.
 
 
@@ -167,7 +171,9 @@ class: center, middle
 ## Using predicate logic as lightly as possible
 
 * This talk tries to derive it from intuition and examples.
+
 * Trade off exactnesss for easier comprehension.
+
 * .red[We would start from the simplified one then move to the harder ones.]
 
 
@@ -181,6 +187,7 @@ class: center, middle
 .tiny-picture[![](image/big-mac-beef.jpg)]
 
 * How could we express that we would like to "make" a burger?
+
 * First of all, We have to define a simplified formal language so that we have a language to say.
 
 ---
@@ -312,7 +319,9 @@ c = Burger
 
 --
 
-* .blue[Yes.] The essense of type inference is walking the abstract syntax tree and collect constraints we must satisfy. Therefore we would reformulate the problem to so-called "unification problem".
+* .blue[Yes.] The essense of type inference is walking the abstract syntax tree and collect constraints we must satisfy. Therefore we would reformulate the problem to so-called .blue[unification problem].
+
+.small-picture[![](image/doge_problem.jpg)]
 
 ---
 
@@ -1179,20 +1188,43 @@ unifyVar tv1 ty2
            Nothing  -> unifyUnboundVar tv1 ty2 }
 ```
 
+
+``` haskell
+instantiate (ForAll tvs ty) = do { tvs' <- mapM (\_ -> newMetaTyVar) tvs
+                                 ; return (substTy tvs (map MetaTv tvs') ty) }
+
+newMetaTyVar ∷ Tc MetaTv
+newMetaTyVar = do { uniq ← newUnique
+                  ; tref ← newTcRef Nothing
+                  ; return (Meta uniq tref) }
+```
+
+---
+
+## Change in Unification
+
+
 ``` haskell
 unifyUnboundVar :: MetaTv -> Tau -> Tc ()
-unifyUnboundVar tv1 ty2@(MetaTv tv2)  -- tv1 is the MetaTv created in instantiate
+unifyUnboundVar tv1 ty2@(MetaTv tv2)  
+-- tv1 is the MetaTv created in instantiate
   = do { mb_ty2 <- readTv tv2
        ; case mb_ty2 of
-           -- check the case unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
-           Just ty2' -> unify (MetaTv tv1) ty2'  
-           -- basically do nothing
+-- check the case unify (MetaTv tv1) (MetaTv tv2) | tv1 == tv2 = return ()
+           Just ty2' -> unify (MetaTv tv1) ty2'
+-- Then bind meta tv1 to ty2, so that tv1 has the same structure as ty2
            Nothing  -> writeTv tv1 ty2 }
+```
+
+``` haskell
 unifyUnboundVar tv1 ty2  -- ty2 is Fun or TyVar or TyCon
   = do { tvs2 <- getMetaTyVars [ty2]
+--see if accidentally capture the vars
        ; if tv1 `elem` tvs2 then
             occursCheckErr tv1 ty2
          else
+
+-- bind meta tv1 to ty2, so that tv1 has the same structure as ty2
             writeTv tv1 ty2 }
 ```
 
@@ -1220,6 +1252,7 @@ h = makeBurgers make
 ```
 
 * It would not typecheck by hindley-milner, since the `makeBurgers`'s forall is not at the top level.
+
 
 ---
 
