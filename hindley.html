@@ -198,8 +198,8 @@ data Term = Var Name              -- x
 
 
 --
-* I would really love to call this language as .blue["System Mc"], but that is actually a misnomer. Its name is .blue[lambda calculus].
-* Then "make" could be expressed as
+* I would really love to call this language as .blue[System Mc], but that is actually a misnomer. Its name is .blue[lambda calculus].
+* Then .blue["make"] could be expressed as
 
 --
 
@@ -861,10 +861,11 @@ data Term = Var Name              -- x
 ```
 
 * We add a .blue[Let Name Term Term] here
-* Polytypes are types containing variables bound by one or more for-all quantifiers
+* Polytypes are types containing variables bound by one or more for-all quantifiers, and notice that in HM system the $\forall$ is only allowed happened at the .blue[outermost].
 
 $$
-\forall a. a \rightarrow a \rightarrow a
+\forall a. a \rightarrow a \rightarrow a \\\
+\forall a b. a \rightarrow a \rightarrow b \\\
 $$
 
 * Then we extend the structure we previously defined one by one.
@@ -1027,6 +1028,7 @@ Wipe out .tiny-picture[![](image/burger-king.png)] to be blank label .tiny-pictu
 ## Generalization
 
 * It is tricky when it comes to comparing polytypes. That somehow complicates the generalization from `checkRho` to `checkSigma`.
+
 * Say the RHS is the annotated type, and the left hand side is the inferred type. $\leq$ means "more polymorphic".
 
 $$
@@ -1217,18 +1219,23 @@ makeBurgers g = let f x = Pair2 ((x bread) beef) ((x rice) prawn)
 h = makeBurgers make
 ```
 
-* It would not typecheck of hindley-milner, since the `makeBurgers`'s forall is not at the top level.
+* It would not typecheck by hindley-milner, since the `makeBurgers`'s forall is not at the top level.
 
 ---
 
-## Higher-rank type system 
+## Higher-rank type system
 
-* To solve the problem of let polymorphism where it is not generalized at the "argument"
+* To solve the problem of let polymorphism where it is not generalized at the .blue[argument].
 
-* We add a type annotation to help the type system to generalize at the argument, without a big change in hindley-milner type system.
+* Allowing the argument to be annotated at the argument. That would help the type system to infer, meanwhile not requireing a big change in hindley-milner type system.
+
+```
+let g = \(f1 :: forall a. a -> a). Pair2 (f1 1) (f1 True)
+in let f = \x. x
+in g f
+```
 
 * Adding a little burden to programmers, but without greatly overhaul the whole system.
-
 
 ---
 
@@ -1254,73 +1261,51 @@ $$
 \tau::= \tau \rightarrow \tau \, | \, ConstantType \\\
 $$
 
-
----
-
-## Change in Inference
-
-* For inference, it is intuitive. Extend the environment by marking `var` with `var_ty`, which is the annotated type, then do the inference for `body`
-* For type checking, a special case we have to deal with, that is determining if a type expression covers another type expression. In academic terminology, it is called "subsumption".
-* Denoted by `subsCheck`
-
-``` haskell
-tcRho (ALam var var_ty body) (Check exp_ty)
-  = do { (arg_ty, body_ty) <- unifyFun exp_ty
-       ; subsCheck arg_ty var_ty
-       ; extendVarEnv var var_ty (checkRho body body_ty) }
-
-tcRho (ALam var var_ty body) (Infer ref)
-  = do { body_ty <- extendVarEnv var var_ty (inferRho body)
-       ; writeTcRef ref (Fun var_ty body_ty) }
-```
-
-* Why do we need subsCheck?
---
-
-* Because programmers could annotate the type in one form but the inferred form is kind of different.
-
----
-
-## Subsumption
-
-* With the $\sigma$ could be in the function argument, we have to extend the rule to compare two polytype expressions.
-* Notice that the type expression inferred by hindley milner, it would only look like this:
+* Therefore it is possible to have $\forall$ not at the top level now
 
 $$
-\forall a. a \rightarrow \forall b.b \rightarrow \forall c.c \rightarrow c
+Bool \rightarrow (\forall a . a \rightarrow a) \\\
+(\forall b. b \rightarrow b) \rightarrow Bool \\\
 $$
-
-or 
-
-$$
-\forall a b c. a \rightarrow b \rightarrow c \rightarrow c
-$$
-
-but not
-
-$$
-\forall b c. (\forall a. a \rightarrow a) \rightarrow b \rightarrow c
-$$
-
-* Therefore what we only have to take this form into consideration when unify with type annotations.
 
 
 ---
 
-## Subsumption
+## What is the most difficult in extending to higher-rank
 
-* However, are these two types equivalent?
+* It is comparing two polytypes. Since we allow $\forall$ to be put at anywhere. Apart from that, it is astonishingly few changes required.
+
+* Are the following two equivalent?
 
 $$
 \forall ab. a \rightarrow b \rightarrow b \\\
-\forall a. a \rightarrow \forall b.b \rightarrow b \\\
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \\\
 $$
 
-* The first could not instantiate the second.
-* They should be isomorphic. The hindley milner could infer the type with forall looks like the first one. But what if we annotate the type as the second one. How to get these two be equivalent by extending the existing rules?
+* .blue[No] if you derive it with intuition. The second could be rewritten to the first one, but the first one could not be rewritten to the second.
+
+$$
+\forall a. a \rightarrow (\forall b.b \rightarrow b) \\\
+\Rightarrow \forall a. a. \rightarrow b_1 \rightarrow b_1 \\\
+\Rightarrow \forall a c. a \rightarrow c \rightarrow c \\\
+\Rightarrow \forall a b. a \rightarrow b \rightarrow b \\\
+$$
+
+* And this is an .blue[issue], since the type inferred by system could be the first, but the programmer annotate the type to be the second.
 
 
-* That is, using tricks to make one polytype being "subsumed" by another polytype.
+---
+
+## Subsumption
+
+* However, we would like this case to be isomorphic. It is the following should be typechecked.
+
+```
+let f = \x. \y. y in (f :: forall a. a -> (forall b. b -> b))
+```
+
+
+* That is, the following should hold.
 
 $$
 \forall a. a \rightarrow (\forall b.b \rightarrow b) \leq \forall ab. a \rightarrow b \rightarrow b \\\
@@ -1328,15 +1313,14 @@ $$
 $$
 
 
+
 ---
 
 ## Subsumption
 
-* We define the prenex form: With all of the "forall" at the "head" of the type annotation.
+* We define the prenex form: With all of the .blue[forall] at the .blue[head] of the type annotation.
 
---
-
-* And the prenex conversion is like the following, floating the "forall" at the right of the arrows to the top.
+* And the prenex conversion is like the following, floating the .blue[forall] at the right of the arrows to the top.
 
 $$
 \forall a. a \rightarrow (\forall b.b \rightarrow b)
@@ -1348,17 +1332,17 @@ $$
 \forall ab. a \rightarrow b \rightarrow b
 $$
 
---
-* It's called Skolemization.
 
 --
 * The technique is to convert the annotated type expression into prenex form and see if one is more generalized than the other.
 
 ---
 
-## Skolemization
+## Deep Skolemization
 
-* Recursivelly floating out the `Forall`
+* We combine this floating out process and replacing `forall` var with simple type var into a recursive function.
+
+* It's called .blue[Deep skolemization].
 
 ``` haskell
 skolemise :: Sigma -> Tc ([TyVar], Rho)
@@ -1384,21 +1368,25 @@ $$
 
 ## Subsumption
 
-* How do we tell if one of the polytype could subsume another?
-* First we skolemize it, and see if the other polytype could instantiate the `Rho` part.
+* `subsCheck` compare two polytypes (two `Sigma`)
+
+* The trick is that we skolemize one of it, and see if the other polytype could instantiate the `Rho` part.
 
 ``` haskell
 subsCheck :: Sigma -> Sigma -> Tc ()
 subsCheck sigma1 sigma2 
   = do { (skol_tvs, rho2) <- skolemise sigma2
        ; subsCheckRho sigma1 rho2
+-- making sure no accidentally captured free vars.
        ; esc_tvs <- getFreeTyVars [sigma1, sigma2]
        ; let bad_tvs = filter (`elem` esc_tvs) skol_tvs
        ; assert (null bad_tvs) (failTc "Subsumption failed")
 ```
 
 * For example, the annotation `sigma2` is $\forall a. a \rightarrow \forall b. b$ and inferred type is $\forall a b. a \rightarrow b$
+
 * Then `skol_tvs` is `[a, b]` and `rho2` is $a \rightarrow b$
+
 * We see $\forall a b. a \rightarrow b$ could instantiate $a \rightarrow b$
 
 ---
@@ -1409,35 +1397,70 @@ subsCheck sigma1 sigma2
 
 ``` haskell
 subsCheckRho :: Sigma -> Rho -> Tc ()
-subsCheckRho sigma1@(ForAll _ _) rho2›
+-- capture all of the ForAll form sigma
+subsCheckRho sigma1@(ForAll _ _) rho2
   = do { rho1 <- instantiate sigma1
        ; subsCheckRho rho1 rho2 }
+-- from now on the Sigma is actually rho for potential further expansion
 subsCheckRho rho1 (Fun a2 r2)
-  = do { (a1,r1) <- unifyFun rho1; subsCheckFun a1 r1 a2 r2 }
+  = do { (a1,r1) <- unifyFun rho1
+       ; subsCheckFun a1 r1 a2 r2 }
 subsCheckRho (Fun a1 r1) rho2
-  = do { (a2,r2) <- unifyFun rho2; subsCheckFun a1 r1 a2 r2 }
+  = do { (a2,r2) <- unifyFun rho2
+       ; subsCheckFun a1 r1 a2 r2 }
+-- two tau types without forall, using unify to check it
 subsCheckRho tau1 tau2
   = unify tau1 tau2
 
+
 subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
-subsCheckFun a1 r1 a2 r2 = do { subsCheck a2 a1; subsCheckRho r1 r2 }
+                        -- using sigma version for argument
+subsCheckFun a1 r1 a2 r2 = do { subusCheck a2 a1
+                        -- using rho version for body
+                              ; subsCheckRho r1 r2
+                              }
 ```
 
-* With subsuption rule added, the argument annotation unification could be handled.
+
+
+---
+
+## All the change needed for Inference
+
+* With subsumption rule added, the argument annotation unification could be handled.
+
+* For inference, it is intuitive. Extend the environment by marking `var` with `var_ty`, which is the annotated type, then do the inference for `body`
+
+* For type checking, we just apply `subsCheck` for .blue[argument], and do the normal check for body.
+
+``` haskell
+tcRho (ALam var var_ty body) (Check exp_ty)
+  = do { (arg_ty, body_ty) <- unifyFun exp_ty
+       ; subsCheck arg_ty var_ty
+       ; extendVarEnv var var_ty (checkRho body body_ty) }
+
+tcRho (ALam var var_ty body) (Infer ref)
+  = do { body_ty <- extendVarEnv var var_ty (inferRho body)
+       ; writeTcRef ref (Fun var_ty body_ty) }
+```
 
 ---
 
 ## Wrapping up
 
 * The hindley milner system is the foundation of Haskell98 standrad. With the knowledge about it, we could understand its extensions and new models inspired by HM.
-* Higher rank corresponds to GHC's extension -XRankNTypes, with this addon, we could make the use case like passing in callback function to be typeable.
-* This slide tries to avoid any mathematical logical deduction for better comprehension. But to understand other papers, you still have to pickup the intuition of mathematical logic.
+
+* Higher rank corresponds to GHC's extension .blue[-XRankNTypes], with this addon, we could make the use case like passing in callback function to be typeable.
+
+* This slide tries to reduce the usage of mathematical logical deduction for better comprehension. But to understand other papers, you still have to pickup the intuition of mathematical logic.
 
 ---
 
 class: center, middle, large
 
 Thank you
+
+### Code is [here](https://github.com/MnO2/hindley-milner)
 
 
     </textarea>
