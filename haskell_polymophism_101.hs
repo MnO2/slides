@@ -1,4 +1,3 @@
-{-# LANGUAGE UnicodeSyntax #-}
 ----------------------------------------------------
 -- Introduction to Polymorphism                   --
 ----------------------------------------------------
@@ -74,6 +73,40 @@ map' f (Cons x xs) = Cons (f x) (map' f xs)
 
 -- $ >>> map' (\x -> not . even $ x) intList
 -- Cons True (Cons False (Cons True Nil))
+
+
+-- reduce the [1,2,3] with (+) operator into 6
+-- with association to the left  ((1+2) + 3)
+--
+--         (+)
+--        /  \
+--     (+)     3
+--     /  \
+--    1    2
+--
+fold_from_left :: (b -> a -> b) -> b -> List a -> b
+fold_from_left f e (Cons x xs) = fold_from_left f (f e x) xs
+fold_from_left f e Nil = e
+
+-- $ >>> fold_from_left (\x y -> x + y) 0 intList
+-- 6
+
+
+-- reduce the [1,2,3] with (+) operator into 6
+-- with association to the right (1 + (2+3))
+--
+--     (+)
+--    /   \
+--   1     (+)
+--         /  \
+--        2    3
+--
+fold_from_right :: (b -> a -> b) -> b -> List a -> b
+fold_from_right f e (Cons x xs) = f (fold_from_right f e xs) x
+fold_from_right f e Nil = e
+
+-- $ >>> fold_from_right (\x y -> x + y) 0 intList
+-- 6
 
 
 ---------------------------
