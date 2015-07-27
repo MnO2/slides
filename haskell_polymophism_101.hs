@@ -77,6 +77,7 @@ map' f (Cons x xs) = Cons (f x) (map' f xs)
 
 -- reduce the [1,2,3] with (+) operator into 6
 -- with association to the left  ((1+2) + 3)
+-- i.e.  python's 'reduce' and ruby's 'reduce' function
 --
 --         (+)
 --        /  \
