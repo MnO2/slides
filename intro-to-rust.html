@@ -1,0 +1,373 @@
+<DOCTYPE html>
+<html>
+  <head>
+    <title>Presentation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+
+      .red    { color: #FF4943; }
+      .gray   { color: #787878; }
+      .green  { color: #87A558; }
+      .blue   { color: #41C8F0; }
+      .yellow { color: #DBEC62; }
+      .large p { font-size: 4em; }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle
+
+# Introduction to Rust
+
+### Paul Meng
+### GrabTaxi, Aug 3rd, 2015.
+
+---
+
+# What is Rust?
+
+* A personal project by Mozilla employee Graydon Hoare.
+* Mozilla began to sponsor it in 2009.
+* Hitting 1.0 stable release in this May.
+* Development in Open, the language has been looked very different from what was in version 0.4.
+* Pitch in one setnece: C++ without legacy. The goal is to replace C++, but not to contend in the same niche with golang.
+
+
+---
+
+# Memory Safety
+
+* No GC, No big runtime, No lang VM's stack and heap. Using system's stack and heap. Therefore it is OK to implement plugins for Ruby, Python.
+* The memory safety are guaranteed by it's type system.
+* Ownership and Move Semantic
+* Borrow Checker and Lifetime Checker.
+
+---
+
+# Immutability By Default
+
+```rust
+fn main() {
+    let x = 5;
+    x = 6; // error!
+
+
+    let mut x = 5;
+    x = 6;
+}
+```
+
+
+---
+# Move Semantic
+
+* Think it like C++11 `std::move` and Rvalue Reference `&&`
+
+``` rust
+fn take(v: Vec<i32>) {
+    // what happens here isn’t important.
+}
+
+fn main() {
+    let v = vec![1, 2, 3];
+    let v2 = v;
+    println!("v[0] is: {}", v[0]);  //error, value has been moved.
+
+
+    let v = vec![1, 2, 3];
+    take(v);
+    println!("v[0] is: {}", v[0]);  //error, value has been moved.
+}
+```
+
+
+---
+
+# Lifetime Checker
+
+* Only in Rust, the `'a` is lifetime parameter
+
+``` rust
+struct Foo<'a> {
+    x: &'a i32,
+}
+
+fn main() {
+    let x;                    // -+ x goes into scope
+                              //  |
+    {                         //  |
+        let y = &5;           // ---+ y goes into scope
+        let f = Foo { x: y }; // ---+ f goes into scope
+        x = &f.x;             //  | | error here
+    }                         // ---+ f and y go out of scope
+                              //  |
+    println!("{}", x);        //  |
+}                             // -+ x goes out of scope
+```
+
+---
+
+# Generics
+
+* Specify type parameters, like `template <typename T>` in C++
+
+``` rust
+fn takes_anything<T>(x: T) {
+    // do something with x
+}
+
+fn takes_two_things<T, U>(x: T, y: U) {
+    // ...
+}
+
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+fn main() {
+    let int_origin = Point { x: 0, y: 0 };
+    let float_origin = Point { x: 0.0, y: 0.0 };
+}
+```
+
+---
+
+# Algebraic Types
+
+```rust
+#[derive(Debug)]
+enum List<T> {
+  Cons(T, Box<List<T>>),
+  End
+}
+
+fn main() {
+    let my_list = List::Cons(1, Box::new(List::Cons(2, Box::new(List::End))));
+
+    println!("{:?}", my_list);
+}
+```
+
+---
+
+# Pattern Matching
+
+```rust
+enum OptionalInt {
+    Value(i32),
+    Missing,
+}
+
+fn main() {
+    let x = OptionalInt::Value(5);
+
+    match x {
+        OptionalInt::Value(i) if i > 5 => println!("Got an int bigger than five!"),
+        OptionalInt::Value(..) => println!("Got an int!"),
+        OptionalInt::Missing => println!("No such luck."),
+    };
+}
+```
+
+
+---
+
+# Pattern Matching (cont.)
+
+```rust
+#[allow(dead_code)]
+#[allow(non_shorthand_field_patterns)]
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+
+fn main() {
+    let origin = Point { x: 0, y: 0 };
+
+    match origin {
+        Point { x: x, y: y } => println!("({},{})", x, y),
+    }
+}
+```
+
+
+---
+
+# Module
+
+* No module in C++
+
+```rust
+mod english {
+    mod greetings {
+        fn foo() {}
+    }
+
+    mod farewells {
+        fn bar() {}
+    }
+}
+
+mod japanese {
+    pub mod greetings {
+        pub fn foo() {
+            println!("foo\n")
+        }
+    }
+
+    pub mod farewells {
+        pub fn bar() {
+            println!("bar\n")
+        }
+    }
+}
+
+fn main() {
+    japanese::greetings::foo();
+    japanese::farewells::bar();
+}
+```
+
+---
+
+# Error Handling
+
+* No exception
+
+```rust
+enum Version { Version1, Version2 }
+
+enum ParseError { InvalidHeaderLength, InvalidVersion }
+
+fn parse_version(header: &[u8]) -> Result<Version, ParseError> {
+    if header.len() < 1 {
+        return Err(ParseError::InvalidHeaderLength);
+    }
+    match header[0] {
+        1 => Ok(Version::Version1),
+        2 => Ok(Version::Version2),
+        _ => Err(ParseError::InvalidVersion)
+    }
+}
+
+fn main() {
+    let version = parse_version(&[1, 2, 3, 4]);
+    match version {
+        Ok(v) => {
+            println!("working with version: {:?}", v);
+        }
+        Err(e) => {
+            println!("error parsing header: {:?}", e);
+        }
+    }
+}
+```
+
+
+---
+
+# Cargo and Crate
+
+* Package system for Rust.
+* [crates.io](https://crates.io/)
+
+```bash
+cargo build
+```
+
+```toml
+[package]
+
+name = "robigo"
+version = "0.0.1"
+authors = ["Paul Meng <mno2@mno2.org"]
+description = "An embedded database implementation"
+license = "BSD3"
+
+repository = "https://github.com/MnO2/robigo"
+readme = "README.md"
+keywords = ["database"]
+
+[dependencies]
+bitflags = "0.3.*"
+libc = "0.1.*"
+log = "0.3.*"
+mmap = "0.1.1"
+nix = "0.3.9"
+```
+
+---
+
+# What I like about the language
+
+* Type safety. Easier to refactor in large code base. And guarantee memory safety without going down the path of Garbage Collection.
+* Type expressibility. With algebraic data type, associated data type and type traits, it is easier to express more concepts in type system.
+* Following the C++'s philosophy, only pays for what you've used.
+* Compiler is easy to extend.
+* Definitely not an easy language.
+
+---
+
+
+class: center, middle, large
+
+Thank you
+
+
+    </textarea>
+    <script>
+        var is_local = (window.location.hostname == "localhost");
+
+        function add_script(src, callback) {
+            var s = document.createElement("script");
+            s.setAttribute("src", src);
+            s.onload = callback;
+            document.body.appendChild(s);
+        }
+
+        function load_slides() {
+            var query = window.location.search.substring(1);
+            var slideshow = remark.create();
+
+            // Setup MathJax
+            MathJax.Hub.Config({
+                tex2jax: {
+                    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+                    processescapes: true,
+                },
+                jax: ["input/TeX","output/HTML-CSS"],
+                displayAlign: "left",
+                displayIndent: "2em"
+            });
+
+
+            MathJax.Hub.Configured();
+        }
+
+        if (is_local) {
+            add_script("javascript/remark-latest.min.js", function() {
+                add_script("javascript/MathJax.js", load_slides);
+            });
+        } else {
+            add_script("https://gnab.github.io/remark/downloads/remark-latest.min.js", function() {
+                add_script("http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured", load_slides);
+            });
+        }
+    </script>
+  </body>
+</html>
