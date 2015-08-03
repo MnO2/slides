@@ -209,7 +209,7 @@ fn main() {
 
 # Module
 
-* No module in C++
+* In C++, we only got `namespace` and `#include`. With Rust, a proper module system was created.
 
 ```rust
 mod english {
@@ -244,9 +244,68 @@ fn main() {
 
 ---
 
+# Module (cont)
+
+With module created, you could `use` to import stuff you would like to use.
+
+```rust
+#[macro_use]
+extern crate bitflags;
+
+extern crate libc;
+
+#[macro_use]
+extern crate log;
+
+extern crate mmap;
+extern crate nix;
+```
+
+```rust
+use std::io::SeekFrom;
+use std::io::Seek;
+use std::fs;
+use std::fs::OpenOptions;
+use std::os::unix::io::AsRawFd;
+use std::{mem, os, iter, ptr, io};
+```
+
+
+---
+
 # Error Handling
 
 * No exception
+* Either handle by `Option<T>` or `Result<T, E>`
+
+
+```rust
+fn divide(numerator: f64, denominator: f64) -> Option<f64> {
+    if denominator == 0.0 {
+        None
+    } else {
+        Some(numerator / denominator)
+    }
+}
+
+fn main() {
+    // The return value of the function is an option
+    let result = divide(2.0, 3.0);
+
+    // Pattern match to retrieve the value
+    match result {
+        // The division was valid
+        Some(x) => println!("Result: {}", x),
+        // The division was invalid
+        None    => println!("Cannot divide by 0")
+    }
+}
+```
+
+
+---
+
+# Error Handling (Cont)
 
 ```rust
 enum Version { Version1, Version2 }
@@ -316,9 +375,17 @@ nix = "0.3.9"
 
 * Type safety. Easier to refactor in large code base. And guarantee memory safety without going down the path of Garbage Collection.
 * Type expressibility. With algebraic data type, associated data type and type traits, it is easier to express more concepts in type system.
-* Following the C++'s philosophy, only pays for what you've used.
+* Following the C++'s philosophy, only pay for what you've used.
 * Compiler is easy to extend.
-* Definitely not an easy language.
+
+
+---
+
+# Drawback
+
+* Not an easy language for sure.
+* Although the lang is marked as stable, some of the libs are still not there as of Aug, 2015 (like green thread)
+
 
 ---
 
