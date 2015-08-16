@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -w -fno-warn-tabs -fno-warn-name-shadowing -fno-warn-unused-binds -fno-warn-missing-signatures -fno-warn-unused-matches #-}
+
 ----------------------------------------------------
 -- Introduction to Polymorphism                   --
 ----------------------------------------------------
@@ -40,6 +42,29 @@ replicatePoly' o n = o : (replicatePoly' o (n-1))
 -- $ >>> replicatePoly' True 3
 -- [True,True,True]
 
+
+-- You could also set the constraint for the type variable with type class
+-- Such as built-in 'Show'  (Think it like java interface)
+--
+print' :: Show a => a -> IO ()
+print' = putStrLn . show
+
+-- $ >>> print' (3.14159 :: Double)
+-- 3.14159
+
+
+-- Another commonly used is 'Eq', it means the element is comparable with '=='
+any' :: Eq a => a -> [a] -> Bool
+any' e [] = False
+any' e (h:rest) | e == h = True
+any' e (h:rest) | e /= h = any' e rest
+
+-- $ >>> any' 1 [2,3,1]
+-- True
+
+-- $ >>> any' 0 [2,3,1]
+-- False
+--
 
 -- Not only you could define polymorphic function, you could also define polymorphic data structure
 data List a = Nil
@@ -85,11 +110,11 @@ map' f (Cons x xs) = Cons (f x) (map' f xs)
 --     /  \
 --    1    2
 --
-fold_from_left :: (b -> a -> b) -> b -> List a -> b
-fold_from_left f e (Cons x xs) = fold_from_left f (f e x) xs
-fold_from_left f e Nil = e
+fold_left_associative :: (b -> a -> b) -> b -> List a -> b
+fold_left_associative f e (Cons x xs) = fold_left_associative f (f e x) xs
+fold_left_associative f e Nil = e
 
--- $ >>> fold_from_left (\x y -> x + y) 0 intList
+-- $ >>> fold_left_associative (\x y -> x + y) 0 intList
 -- 6
 
 
@@ -102,12 +127,34 @@ fold_from_left f e Nil = e
 --         /  \
 --        2    3
 --
-fold_from_right :: (b -> a -> b) -> b -> List a -> b
-fold_from_right f e (Cons x xs) = f (fold_from_right f e xs) x
-fold_from_right f e Nil = e
+fold_right_associative :: (b -> a -> b) -> b -> List a -> b
+fold_right_associative f e (Cons x xs) = f (fold_right_associative f e xs) x
+fold_right_associative f e Nil = e
 
--- $ >>> fold_from_right (\x y -> x + y) 0 intList
+-- $ >>> fold_right_associative (\x y -> x + y) 0 intList
 -- 6
+
+
+-- We could redefine the any' with fold
+any'' :: Eq a => a -> [a] -> Bool
+any'' e l = foldl (\z p -> z || p == e) False l
+
+-- $ >>> any'' 1 [2,3,1]
+-- True
+
+-- $ >>> any'' 0 [2,3,1]
+-- False
+
+
+-- To show some magic, there is a build-in typeclass callsed 'Foldable', to denote the 'container' that could be fold upon
+anyFoldable :: (Foldable t, Eq a) => a -> t a -> Bool
+anyFoldable e c = foldl (\z p -> z || p == e) False c
+
+-- $ >>> anyFoldable 1 [2,3,1]
+-- True
+
+-- $ >>> anyFoldable 0 [2,3,1]
+-- False
 
 
 ---------------------------
