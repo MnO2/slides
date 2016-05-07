@@ -183,25 +183,6 @@ data Free f a = Pure a | Roll (f (Free f a))
 ```
 
 
-Data type
----------
-
-```haskell
---it needs to be a functor
-instance Functor f => Functor (Free f) where
-  fmap f (Pure a) = Pure (f a)
-  fmap f (Roll x) = Roll (fmap (fmap f) x)
-
---this is the same thing as (++) basically
-concatFree :: Functor f => Free f (Free f a) -> Free f a
-concatFree (Pure x) = x
-concatFree (Roll y) = Roll (fmap concatFree y)
-
-instance Functor f => Monad (Free f) where
-  return = Pure
-  x >>= f = concatFree (fmap f x)
-```
-
 Interpret in IO Monad
 ----------------------
 
@@ -258,9 +239,10 @@ spec = do
 How to Test This?
 -----------------
 
-* Without resorting to external database
-* Using local state to simulate the state and response.
+* Without resorting to external database Using local state to simulate the state and response.
 * Test it semantically, on the command level, but not the side-effect comes with the commands.
+* Suitable for small amount of API (get, set)
+
 
 
 Thank you
