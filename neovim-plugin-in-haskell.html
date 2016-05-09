@@ -72,7 +72,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <section id="whats-neovim" class="slide level2">
 <h1>What's neovim</h1>
 <ul>
-<li>A fork of vim and pioneered the supports for the long-wanted features.</li>
+<li>A fork of vim and pioneered the supports for the long-wanted features. (then we have vim 8.0)</li>
 <li>Features include async io, RPC architecture, job-control, integrated term.</li>
 <li>Modernize the C code for vim. Vim has been notorious for legacy and bad code.</li>
 <li>Unlike the contribution to vim, the initiator of neovim makes the contribution env much more friendly</li>
@@ -88,9 +88,60 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li>VimL is only for minimal glue.</li>
 </ul>
 </section>
-<section id="run-with-hspec" class="slide level2">
-<h1>Run with Hspec</h1>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"></code></pre></div>
+<section id="neovim-api" class="slide level2">
+<h1>Neovim API</h1>
+<ul>
+<li><code>nvim --api-info</code> would dump the api info in msgpack format</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">nvim</span> --api-info <span class="kw">|</span> <span class="kw">python</span> -c <span class="st">&#39;import msgpack, sys, yaml; print yaml.dump(msgpack.unpackb(sys.stdin.read()))&#39;</span></code></pre></div>
+<pre><code>error_types:
+  Exception: {id: 0}
+  Validation: {id: 1}
+functions:
+- async: false
+  can_fail: true
+  name: buffer_line_count
+  parameters:
+  - [Buffer, buffer]
+  return_type: Integer</code></pre>
+</section>
+<section id="haskell-wrapper" class="slide level2">
+<h1>Haskell Wrapper</h1>
+<ul>
+<li><a href="nvim-hs">http://hackage.haskell.org/package/nvim-hs</a></li>
+<li><a href="nvim-hs">https://hackage.haskell.org/package/nvim-hs-contrib</a></li>
+</ul>
+</section>
+<section id="launching-the-plugin" class="slide level2">
+<h1>Launching the plugin</h1>
+<pre><code>PATH=`stack path --bin-path` stack exec nvim-fib-exe -- &quot;$@&quot;</code></pre>
+<pre><code>if has(&#39;nvim&#39;) &quot; This way you can also put it in your vim config file
+  call remote#host#Register(&#39;fibonacci&#39;, &quot;*&quot;, rpcstart(&#39;/Users/mno2/Develop/haskell/nvim-fib/nvim-hs-devel.sh&#39;))
+  let haskellChannel = remote#host#Require(&#39;fibonacci&#39;)
+
+  if haskellChannel &lt; 1
+    echom &#39;Failure to initialize the haskell channel for remote procedure calls&#39;
+    cq!
+  endif
+endif</code></pre>
+</section>
+<section id="plugin-functions" class="slide level2">
+<h1>Plugin Functions</h1>
+<pre><code>module Fibonacci.Plugin (fibonacci) where
+
+import Neovim
+
+fibonacci :: Neovim r st String
+fibonacci = do
+  cw &lt;- errOnInvalidResult $ vim_call_function &quot;expand&quot; $ [toObject &quot;&lt;cword&gt;&quot;]
+  let n = read cw
+  return $ show (fibs !! n)
+  where
+    fibs :: [Integer]
+    fibs = 0:1:scanl1 (+) fibs</code></pre>
+</section>
+<section id="complete-function-for-emoji" class="slide level2">
+<h1>Complete function for Emoji</h1>
 </section>
 <section id="thank-you" class="slide level2">
 <h1>Thank you</h1>
