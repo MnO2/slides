@@ -30,7 +30,8 @@ RPC architecture
 Neovim API
 ----------
 
-* `nvim --api-info` would dump the api info in msgpack format
+* The official promises to maintain the python library binding while the active development
+* However, you can use `nvim --api-info` to dump the api info in msgpack format
 
 ```bash
 nvim --api-info | python -c 'import msgpack, sys, yaml; print yaml.dump(msgpack.unpackb(sys.stdin.read()))'
@@ -53,17 +54,48 @@ functions:
 Haskell Wrapper
 ---------------
 
-* [http://hackage.haskell.org/package/nvim-hs](nvim-hs)
-* [https://hackage.haskell.org/package/nvim-hs-contrib](nvim-hs)
+* [nvim-hs](https://hackage.haskell.org/package/nvim-hs)
+* [nvim-hs-contrib](https://hackage.haskell.org/package/nvim-hs-contrib)
+
+
+REPL in ghci
+------------
+
+* Start the nvim by specifying `NVIM_LISTEN_ADDRESS`
+
+```bash
+NVIM_LISTEN_ADDRESS=/tmp/nvim nvim
+```
+
+* Then start ghci by setting the env var
+
+```bash
+NVIM_LISTEN_ADDRESS=/tmp/nvim stack ghci
+```
+
+```haskell
+λ Right (tids, cfg) <- develMain Nothing
+
+λ runNeovim' cfg $ vim_call_function "getqflist" []
+ Right (Right (ObjectArray []))
+```
 
 
 Launching the plugin
 --------------------
 
+* Make a shell script and put the `stack exec` in it
 ```
-PATH=`stack path --bin-path` stack exec nvim-fib-exe -- "$@"
+PATH=`stack path --bin-path` stack exec nvim-hs-emoji-exe -- "$@"
 ```
 
+* Let neovim start the process so that the channel is established
+* Neovim provides `rpcstart` function call
+* `remote#host#Register` and `remote#host#Reqreui` are VimL help function
+
+
+Launching the plugin
+--------------------
 
 ```
 if has('nvim') " This way you can also put it in your vim config file
@@ -77,11 +109,13 @@ if has('nvim') " This way you can also put it in your vim config file
 endif
 ```
 
+Fibonacci Function
+------------------
 
-Plugin Functions
-----------------
+* Get the number `N` under the cursor, calculate the `N`th Fibonacci number.
+* Using `Neovim` monad, which is `data Neovim r st a`
 
-```
+```haskell
 module Fibonacci.Plugin (fibonacci) where
 
 import Neovim
@@ -96,10 +130,41 @@ fibonacci = do
     fibs = 0:1:scanl1 (+) fibs
 ```
 
-Complete function for Emoji
----------------------------
+Autocomplete Emoji
+------------------
+
+* Vim has a built-in `omnifunc` mechanism for autocompletion
+* Type some chars and press `Ctrl-X Ctrl-O`
+* You implemented a function with the following spec
+
+1. Two params: `findstart` and `base`
+2. It would be first call with `findstart` as 1 and `base` as empty
+3. Then it would be call with `findstart` as 0 and `base` as the prefix
+
+
+Autocomplete Emoji
+------------------
+
+```haskell
+emojicomplete :: Bool -> String -> Neovim r st (Either Int [String])
+emojicomplete findstart base = do
+  if findstart
+     then do
+       curr_line :: String <- errOnInvalidResult $ vim_call_function "getline" $ [toObject "."]
+       curr_col :: Int <- errOnInvalidResult $ vim_call_function "col" $ [toObject "."]
+       let prefix = take (curr_col-1) curr_line
+       let reverse_idx = fromMaybe 0 (L.findIndex (== ' ') (reverse prefix))
+       return $ Left (curr_col - reverse_idx - 1)
+     else do
+       let emoji = [":thumbsup:", ":thumbsdown:", ":smile:", ":banana:"]
+       let ans = filter (L.isPrefixOf base) emoji
+       return $ Right ans
+```
 
 
 Thank you
 ---------
+
+* [Code is here](https://github.com/MnO2/nvim-hs-emoji)
+
 
