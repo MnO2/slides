@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Paul Meng">
+  <title>Writing Neovim plugin in Haskell</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="reveal.js/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" href="reveal.js/css/theme/white.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="reveal.js/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+  <h1 class="title">Writing Neovim plugin in Haskell</h1>
+  <h2 class="author">Paul Meng</h2>
+</section>
+
+<section id="whats-neovim" class="slide level2">
+<h1>What's neovim</h1>
+<ul>
+<li>A fork of vim and pioneered the supports for the long-wanted features. (then we have vim 8.0)</li>
+<li>Features include async io, RPC architecture, job-control, integrated term.</li>
+<li>Modernize the C code for vim. Vim has been notorious for legacy and bad code.</li>
+<li>Unlike the contribution to vim, the initiator of neovim makes the contribution env much more friendly</li>
+</ul>
+</section>
+<section id="rpc-architecture" class="slide level2">
+<h1>RPC architecture</h1>
+<ul>
+<li>The main functions of the features run in another process.</li>
+<li>Using Msgpack binary protocol to communicate with the plugin process.</li>
+<li>Abstract the communication with &quot;channel&quot;</li>
+<li>That means you can write the plugin in any programming language you prefer</li>
+<li>VimL is only for minimal glue.</li>
+</ul>
+</section>
+<section id="neovim-api" class="slide level2">
+<h1>Neovim API</h1>
+<ul>
+<li>The official promises to maintain the python library binding while the active development</li>
+<li>However, you can use <code>nvim --api-info</code> to dump the api info in msgpack format</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">nvim</span> --api-info <span class="kw">|</span> <span class="kw">python</span> -c <span class="st">&#39;import msgpack, sys, yaml; print yaml.dump(msgpack.unpackb(sys.stdin.read()))&#39;</span></code></pre></div>
+<pre><code>error_types:
+  Exception: {id: 0}
+  Validation: {id: 1}
+functions:
+- async: false
+  can_fail: true
+  name: buffer_line_count
+  parameters:
+  - [Buffer, buffer]
+  return_type: Integer</code></pre>
+</section>
+<section id="haskell-wrapper" class="slide level2">
+<h1>Haskell Wrapper</h1>
+<ul>
+<li><a href="https://hackage.haskell.org/package/nvim-hs">nvim-hs</a></li>
+<li><a href="https://hackage.haskell.org/package/nvim-hs-contrib">nvim-hs-contrib</a></li>
+</ul>
+</section>
+<section id="repl-in-ghci" class="slide level2">
+<h1>REPL in ghci</h1>
+<ul>
+<li>Start the nvim by specifying <code>NVIM_LISTEN_ADDRESS</code></li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ot">NVIM_LISTEN_ADDRESS=</span>/tmp/nvim <span class="kw">nvim</span></code></pre></div>
+<ul>
+<li>Then start ghci by setting the env var</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ot">NVIM_LISTEN_ADDRESS=</span>/tmp/nvim <span class="kw">stack</span> ghci</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">λ <span class="dt">Right</span> (tids, cfg) <span class="ot">&lt;-</span> develMain <span class="dt">Nothing</span>
+
+λ runNeovim&#39; cfg <span class="fu">$</span> vim_call_function <span class="st">&quot;getqflist&quot;</span> []
+ <span class="dt">Right</span> (<span class="dt">Right</span> (<span class="dt">ObjectArray</span> []))</code></pre></div>
+</section>
+<section id="launching-the-plugin" class="slide level2">
+<h1>Launching the plugin</h1>
+<ul>
+<li><p>Make a shell script and put the <code>stack exec</code> in it</p>
+<pre><code>PATH=`stack path --bin-path` stack exec nvim-hs-emoji-exe -- &quot;$@&quot;</code></pre></li>
+<li>Let neovim start the process so that the channel is established</li>
+<li>Neovim provides <code>rpcstart</code> function call</li>
+<li><p><code>remote#host#Register</code> and <code>remote#host#Reqreui</code> are VimL help function</p></li>
+</ul>
+</section>
+<section id="launching-the-plugin-1" class="slide level2">
+<h1>Launching the plugin</h1>
+<pre><code>if has(&#39;nvim&#39;) &quot; This way you can also put it in your vim config file
+  call remote#host#Register(&#39;fibonacci&#39;, &quot;*&quot;, rpcstart(&#39;/Users/mno2/Develop/haskell/nvim-fib/nvim-hs-devel.sh&#39;))
+  let haskellChannel = remote#host#Require(&#39;fibonacci&#39;)
+
+  if haskellChannel &lt; 1
+    echom &#39;Failure to initialize the haskell channel for remote procedure calls&#39;
+    cq!
+  endif
+endif</code></pre>
+</section>
+<section id="fibonacci-function" class="slide level2">
+<h1>Fibonacci Function</h1>
+<ul>
+<li>Get the number <code>N</code> under the cursor, calculate the <code>N</code>th Fibonacci number.</li>
+<li>Using <code>Neovim</code> monad, which is <code>data Neovim r st a</code></li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Fibonacci.Plugin</span> (fibonacci) <span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Neovim</span>
+
+<span class="ot">fibonacci ::</span> <span class="dt">Neovim</span> r st <span class="dt">String</span>
+fibonacci <span class="fu">=</span> <span class="kw">do</span>
+  cw <span class="ot">&lt;-</span> errOnInvalidResult <span class="fu">$</span> vim_call_function <span class="st">&quot;expand&quot;</span> <span class="fu">$</span> [toObject <span class="st">&quot;&lt;cword&gt;&quot;</span>]
+  <span class="kw">let</span> n <span class="fu">=</span> read cw
+  return <span class="fu">$</span> show (fibs <span class="fu">!!</span> n)
+  <span class="kw">where</span>
+<span class="ot">    fibs ::</span> [<span class="dt">Integer</span>]
+    fibs <span class="fu">=</span> <span class="dv">0</span><span class="fu">:</span><span class="dv">1</span><span class="fu">:</span>scanl1 (<span class="fu">+</span>) fibs</code></pre></div>
+</section>
+<section id="autocomplete-emoji" class="slide level2">
+<h1>Autocomplete Emoji</h1>
+<ul>
+<li>Vim has a built-in <code>omnifunc</code> mechanism for autocompletion</li>
+<li>Type some chars and press <code>Ctrl-X Ctrl-O</code></li>
+<li>You implemented a function with the following spec</li>
+</ul>
+<ol type="1">
+<li>Two params: <code>findstart</code> and <code>base</code></li>
+<li>It would be first call with <code>findstart</code> as 1 and <code>base</code> as empty</li>
+<li>Then it would be call with <code>findstart</code> as 0 and <code>base</code> as the prefix</li>
+</ol>
+</section>
+<section id="autocomplete-emoji-1" class="slide level2">
+<h1>Autocomplete Emoji</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">emojicomplete ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Neovim</span> r st (<span class="dt">Either</span> <span class="dt">Int</span> [<span class="dt">String</span>])
+emojicomplete findstart base <span class="fu">=</span> <span class="kw">do</span>
+  <span class="kw">if</span> findstart
+     <span class="kw">then</span> <span class="kw">do</span>
+<span class="ot">       curr_line ::</span> <span class="dt">String</span> <span class="ot">&lt;-</span> errOnInvalidResult <span class="fu">$</span> vim_call_function <span class="st">&quot;getline&quot;</span> <span class="fu">$</span> [toObject <span class="st">&quot;.&quot;</span>]
+<span class="ot">       curr_col ::</span> <span class="dt">Int</span> <span class="ot">&lt;-</span> errOnInvalidResult <span class="fu">$</span> vim_call_function <span class="st">&quot;col&quot;</span> <span class="fu">$</span> [toObject <span class="st">&quot;.&quot;</span>]
+       <span class="kw">let</span> prefix <span class="fu">=</span> take (curr_col<span class="fu">-</span><span class="dv">1</span>) curr_line
+       <span class="kw">let</span> reverse_idx <span class="fu">=</span> fromMaybe <span class="dv">0</span> (L.findIndex (<span class="fu">==</span> <span class="ch">&#39; &#39;</span>) (reverse prefix))
+       return <span class="fu">$</span> <span class="dt">Left</span> (curr_col <span class="fu">-</span> reverse_idx <span class="fu">-</span> <span class="dv">1</span>)
+     <span class="kw">else</span> <span class="kw">do</span>
+       <span class="kw">let</span> emoji <span class="fu">=</span> [<span class="st">&quot;:thumbsup:&quot;</span>, <span class="st">&quot;:thumbsdown:&quot;</span>, <span class="st">&quot;:smile:&quot;</span>, <span class="st">&quot;:banana:&quot;</span>]
+       <span class="kw">let</span> ans <span class="fu">=</span> filter (L.isPrefixOf base) emoji
+       return <span class="fu">$</span> <span class="dt">Right</span> ans</code></pre></div>
+</section>
+<section id="thank-you" class="slide level2">
+<h1>Thank you</h1>
+<ul>
+<li><a href="https://github.com/MnO2/nvim-hs-emoji">Code is here</a></li>
+</ul>
+</section>
+    </div>
+  </div>
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Transition style
+        transition: 'fade', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>
