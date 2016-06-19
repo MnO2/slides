@@ -1,78 +1,21 @@
-<DOCTYPE html>
 <html>
-  <head>
-    <title>Presentation</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <style type="text/css">
-      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
-      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
-      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
-
-      body { font-family: 'Droid Serif'; }
-      h1, h2, h3 {
-        font-family: 'Yanone Kaffeesatz';
-        font-weight: normal;
-      }
-      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
-
-      .red    { color: #FF4943; }
-      .gray   { color: #787878; }
-      .green  { color: #87A558; }
-      .blue   { color: #41C8F0; }
-      .yellow { color: #DBEC62; }
-      .large p { font-size: 4em; }
-    </style>
-  </head>
-  <body>
-    <textarea id="source">
-
-class: center, middle
-
-## MnO2’s Slides
-
-* [Introduction to Haskell](intro-to-haskell.html)
-* [Hindley Milner Type System](hindley.html)
-
-    </textarea>
-    <script>
-        var is_local = (window.location.hostname == "localhost");
-
-        function add_script(src, callback) {
-            var s = document.createElement("script");
-            s.setAttribute("src", src);
-            s.onload = callback;
-            document.body.appendChild(s);
-        }
-
-        function load_slides() {
-            var query = window.location.search.substring(1);
-            var slideshow = remark.create();
-
-            // Setup MathJax
-            MathJax.Hub.Config({
-                tex2jax: {
-                    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-                }
-            });
-
-            MathJax.Hub.Queue(function() {
-                $(MathJax.Hub.getAllJax()).map(function(index, elem) {
-                    return(elem.SourceElement());
-                }).parent().addClass('has-jax');
-            });
-
-            MathJax.Hub.Configured();
-        }
-
-        if (is_local) {
-            add_script("javascript/remark-latest.min.js", function() {
-                add_script("javascript/MathJax.js", load_slides);
-            });
-        } else {
-            add_script("https://gnab.github.io/remark/downloads/remark-latest.min.js", function() {
-                add_script("http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured", load_slides);
-            });
-        }
-    </script>
-  </body>
+    <head>
+        <link rel="stylesheet" href="derived/reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="derived/reveal.js/css/theme/white.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+              <section data-markdown>
+                <ul>
+                  <li><a href="http://mno2.github.io/slides/derived/neovim-plugin-in-haskell.html">Neovim plugin in Haskell</a></li>
+                </ul>
+              </section>
+            </div>
+        </div>
+        <script src="derived/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize();
+        </script>
+    </body>
 </html>
