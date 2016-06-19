@@ -1,997 +1,644 @@
-<DOCTYPE html>
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>Presentation</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <style type="text/css">
-      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
-      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
-      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
-
-      body { font-family: 'Droid Serif'; }
-      h1, h2, h3 {
-        font-family: 'Yanone Kaffeesatz';
-        font-weight: normal;
-      }
-      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
-
-      .red    { color: #FF4943; }
-      .gray   { color: #787878; }
-      .green  { color: #87A558; }
-      .blue   { color: #41C8F0; }
-      .yellow { color: #DBEC62; }
-      .large p { font-size: 4em; }
-    </style>
-  </head>
-  <body>
-    <textarea id="source">
-class: center, middle
-
-# Introduction to Haskell
-
-## Paul Meng (MnO2)
-## 2013/07/26
-
----
-
-
-## Who am I?
-
-* Translator of [Learn you a Haskell for great good](http://learnyouahaskell-zh-tw.csie.org/) 
-* Several side projects in Haskell
-    * [encoding-mashup-server](https://github.com/g0v/encoding-mashup-server) for [g0v](http://g0v.tw/)
-    * [pulseaudio binding](https://github.com/favonia/pulse)
-* Initiator of [#haskell.tw](https://plus.google.com/communities/103015857789020103513) (G+ community and Freenode channel)
-
-
----
-
-
-## Why giving a FPL tech talk?
-
-* CMU Professor Robert Harper starts to [teach Functional Programming to freshman](http://existentialtype.wordpress.com/2011/03/15/teaching-fp-to-freshmen/) in 2011
-* Now lots of freshman course teaches OCaml or Standard ML.
-* Most CS students in Taiwan never have a Programming Language class.
-
-
----
-
-
-
-## A little history of Haskell
-
-* Pronounced as /ˈhæskəl/
-* Named after Logician Haskell Curry
-* A strong static type, purely functional programming language with non-strict semantic
-* Appeared in 1990 (PHP appeared in 1995, Python appeared in 1991)
-* Famous code snippet is quick sort
-
-    ```
-    quickSort :: Ord a => [a] -> [a]
-    quickSort []     = []
-    quickSort (x:xs) = quickSort[a | a <- xs, a < x]
-                        ++ [x] 
-                        ++ quickSort [b | b <- xs, b >= x]
-    ```
-
-
-
----
-
-
-
-
-## Why Haskell?
-
-* Create a whole new experience towards programming (if you don't have any before)
-* Different beast from Lisp family
-* More mature ecosystem than OCaml and Standard ML
-* And some advertising benefits
-    * Small language core provides big flexibility
-    * Strong typing catches many bugs at compile time
-    * Functional code permits better testing methodologies
-    * Can parallelize non-concurrent code without changing semantics
-* It also has disadvantages, but in general it is much closer to the state-of-the-art research results.
-
-
----
-
-
-
-## Who is using Haskell (1)
-
-* Google
-    * [ganeti](https://code.google.com/p/ganeti/) is a cluster virtual server management software tool built on top of existing virtualization technologies such as Xen or KVM and other Open Source software.
-
-![](image/ganeti.png)
-
-
-
----
-
-
-## Who is using Haskell (2)
-
-* Facebook
-    * [lex-pass](https://github.com/facebook/lex-pass)
-    * manipulate a php codebase using haskell to transform the abstract-syntax-tree
-
-![](image/lex-pass.png)
-
-
-
----
-
-
-## Who is using Haskell (3)
-
-* Haskell Consulting/Education & Infrastructure Building
-    * [FP Complete](https://www.fpcomplete.com/)
-
-* Start-ups
-    * [Bump](https://bu.mp/)
-    * [Netcycler](http://www.netcycler.com/)
-
-* Hedge Funds
-    * [Alpha Heavy](http://www.alphaheavy.com/)
-    * [Tsuru Capital](http://www.tsurucapital.com/en/)
-
-
-
----
-
-
-## Projects using Haskell (1)
-
-* [xmonad](http://xmonad.org/), A tiling window manager
-
-![](image/xmonad.png)
-
-
-
----
-
-
-## Projects using Haskell (2)
-
-* [pandoc](http://johnmacfarlane.net/pandoc/)
-
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <title></title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="reveal.js/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="reveal.js/css/theme/white.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="reveal.js/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+
+<section class="slide level2">
+
+<p>class: center, middle</p>
+</section>
+<section><section id="introduction-to-haskell" class="titleslide slide level1"><h1>Introduction to Haskell</h1></section><section id="paul-meng-mno2" class="slide level2">
+<h1>Paul Meng (MnO2)</h1>
+</section><section id="section" class="slide level2">
+<h1>2013/07/26</h1>
+</section><section id="who-am-i" class="slide level2">
+<h1>Who am I?</h1>
+<ul>
+<li>Translator of <a href="http://learnyouahaskell-zh-tw.csie.org/">Learn you a Haskell for great good</a></li>
+<li>Several side projects in Haskell
+<ul>
+<li><a href="https://github.com/g0v/encoding-mashup-server">encoding-mashup-server</a> for <a href="http://g0v.tw/">g0v</a></li>
+<li><a href="https://github.com/favonia/pulse">pulseaudio binding</a></li>
+</ul></li>
+<li>Initiator of <a href="https://plus.google.com/communities/103015857789020103513">#haskell.tw</a> (G+ community and Freenode channel)</li>
+</ul>
+</section><section id="why-giving-a-fpl-tech-talk" class="slide level2">
+<h1>Why giving a FPL tech talk?</h1>
+<ul>
+<li>CMU Professor Robert Harper starts to <a href="http://existentialtype.wordpress.com/2011/03/15/teaching-fp-to-freshmen/">teach Functional Programming to freshman</a> in 2011</li>
+<li>Now lots of freshman course teaches OCaml or Standard ML.</li>
+<li>Most CS students in Taiwan never have a Programming Language class.</li>
+</ul>
+</section><section id="a-little-history-of-haskell" class="slide level2">
+<h1>A little history of Haskell</h1>
+<ul>
+<li>Pronounced as /ˈhæskəl/</li>
+<li>Named after Logician Haskell Curry</li>
+<li>A strong static type, purely functional programming language with non-strict semantic</li>
+<li>Appeared in 1990 (PHP appeared in 1995, Python appeared in 1991)</li>
+<li><p>Famous code snippet is quick sort</p>
+<pre><code>quickSort :: Ord a =&gt; [a] -&gt; [a]
+quickSort []     = []
+quickSort (x:xs) = quickSort[a | a &lt;- xs, a &lt; x]
+                    ++ [x] 
+                    ++ quickSort [b | b &lt;- xs, b &gt;= x]</code></pre></li>
+</ul>
+</section><section id="why-haskell" class="slide level2">
+<h1>Why Haskell?</h1>
+<ul>
+<li>Create a whole new experience towards programming (if you don't have any before)</li>
+<li>Different beast from Lisp family</li>
+<li>More mature ecosystem than OCaml and Standard ML</li>
+<li>And some advertising benefits
+<ul>
+<li>Small language core provides big flexibility</li>
+<li>Strong typing catches many bugs at compile time</li>
+<li>Functional code permits better testing methodologies</li>
+<li>Can parallelize non-concurrent code without changing semantics</li>
+</ul></li>
+<li>It also has disadvantages, but in general it is much closer to the state-of-the-art research results.</li>
+</ul>
+</section><section id="who-is-using-haskell-1" class="slide level2">
+<h1>Who is using Haskell (1)</h1>
+<ul>
+<li>Google
+<ul>
+<li><a href="https://code.google.com/p/ganeti/">ganeti</a> is a cluster virtual server management software tool built on top of existing virtualization technologies such as Xen or KVM and other Open Source software.</li>
+</ul></li>
+</ul>
+<figure>
+<img src="image/ganeti.png" />
+</figure>
+</section><section id="who-is-using-haskell-2" class="slide level2">
+<h1>Who is using Haskell (2)</h1>
+<ul>
+<li>Facebook
+<ul>
+<li><a href="https://github.com/facebook/lex-pass">lex-pass</a></li>
+<li>manipulate a php codebase using haskell to transform the abstract-syntax-tree</li>
+</ul></li>
+</ul>
+<figure>
+<img src="image/lex-pass.png" />
+</figure>
+</section><section id="who-is-using-haskell-3" class="slide level2">
+<h1>Who is using Haskell (3)</h1>
+<ul>
+<li>Haskell Consulting/Education &amp; Infrastructure Building
+<ul>
+<li><a href="https://www.fpcomplete.com/">FP Complete</a></li>
+</ul></li>
+<li>Start-ups
+<ul>
+<li><a href="https://bu.mp/">Bump</a></li>
+<li><a href="http://www.netcycler.com/">Netcycler</a></li>
+</ul></li>
+<li>Hedge Funds
+<ul>
+<li><a href="http://www.alphaheavy.com/">Alpha Heavy</a></li>
+<li><a href="http://www.tsurucapital.com/en/">Tsuru Capital</a></li>
+</ul></li>
+</ul>
+</section><section id="projects-using-haskell-1" class="slide level2">
+<h1>Projects using Haskell (1)</h1>
+<ul>
+<li><a href="http://xmonad.org/">xmonad</a>, A tiling window manager</li>
+</ul>
+<figure>
+<img src="image/xmonad.png" />
+</figure>
+</section><section id="projects-using-haskell-2" class="slide level2">
+<h1>Projects using Haskell (2)</h1>
+<ul>
+<li><a href="http://johnmacfarlane.net/pandoc/">pandoc</a></li>
+</ul>
 <iframe src="http://johnmacfarlane.net/pandoc/try/" width="100%" height="500">
 </iframe>
-
-
-
----
-
-
-## Projects using Haskell (3)
-
-* [git annex](http://git-annex.branchable.com/), managing large file with git.
-
+</section><section id="projects-using-haskell-3" class="slide level2">
+<h1>Projects using Haskell (3)</h1>
+<ul>
+<li><a href="http://git-annex.branchable.com/">git annex</a>, managing large file with git.</li>
+</ul>
 <iframe src="http://git-annex.branchable.com/not/" width="100%" height="500">
 </iframe>
-
-
-
----
-
-
-## Projects using Haskell (4)
-
-* [A port of Wolfenstein 3D](https://twitter.com/id_aa_carmack/status/331918309916295168)
-
-![](image/john_carmark.png)
-
-
-
----
-
-
-## Projects using Haskell (5)
-
-* [Pugs](http://www.pugscode.org/) by Audrey Tang
-
+</section><section id="projects-using-haskell-4" class="slide level2">
+<h1>Projects using Haskell (4)</h1>
+<ul>
+<li><a href="https://twitter.com/id_aa_carmack/status/331918309916295168">A port of Wolfenstein 3D</a></li>
+</ul>
+<figure>
+<img src="image/john_carmark.png" />
+</figure>
+</section><section id="projects-using-haskell-5" class="slide level2">
+<h1>Projects using Haskell (5)</h1>
+<ul>
+<li><a href="http://www.pugscode.org/">Pugs</a> by Audrey Tang</li>
+</ul>
 <iframe src="http://www.pugscode.org/" width="100%" height="500">
 </iframe>
-
-
-
----
-
-
-## What is Functional Programming?
-
-
-
-
----
-
-
-
-## Programming is Encoding
-
-* Encoding the solution description into some (formal) system
-* Therefore Functional Programming is encoding the description into (mathematical) function
-* Function is first-class value
-
-![](image/func_compose.png)
-
-
-
----
-
-
-## Comparing to other Programming Paradigms (1)
-
-* Encoding the pattern into the Jacquard Loom
-
-![](image/jacquard_loom.jpg)
-
-
-
----
-
-
-## Comparing to other Programming Paradigms (2)
-
-* Imperative Programming encodes the description into lines of instructions, and its data
-    * From Machine instructions to Assembly Language
-    * Categorize bit-pattern on a physical machine.
-* Procedural Programming encodes the description into lines of subprograms
-
-
-
----
-
-
-## Comparing to other Programming Paradigms (3)
-
-* Object-Oriendted Programming encodes the description into Object interaction and Message Passing
-    * At this moment in most cases, when we are saying "Design Patterns", what we are saying is "OOP Design Patterns"
-    * [Alan Kay stress that the most important property of OOP is message passing, but not Object](http://lists.squeakfoundation.org/pipermail/squeak-dev/1998-October/017019.html)
-
-
-
----
-
-
-## Comparing to other Programming Paradigms (4)
-
-* Visual Programming
-    * A programming language doesn't have to be text-based
-    * Encode description into Graph
-
-
-
----
-
-
-## Theorem Prover
-
-* Logicism: The theory that mathematics is an extension of logic and therefore some or all mathematics is reducible to logic
-* Encode the description into a propositional logic statement.
-* A logical statement is a theorem
-* Programming is proving a theorem
-
-
-
----
-
-
-## Human makes Mistakes
-
-* We introduces different paradigm of composing, but we human make mistakes when doing composition.
-* If no type, it will cause runtime error, or burn-out circuit boards
-
-![](image/type_unsafe_compose.png)
-
-* To prevent ridiculous errors, we check type.
-
-![](image/type_check_compose.png)
-
-
-
----
-
-
-## Real World example of Untyped (or single type)
-
-* Untyped example: Bash
-    * put a file named as "-rf"
-    * then "rm *"
-    * then all of directories and files will be deleted.
-
-* In Bash, the only type of the language is "String"
-
-
-
----
-
-
-## Mainstream PL type system defects
-
-* Tony Hoare said "Null Reference" is his billion-dollar mistake.
-* In java, "Integer" type is actually consists of "integer" and "null"
-* Option Type:  "Just 1" or "Nothing".
-* Compiler would complain when pass an option type value to a Integer slot.
-
+</section><section id="what-is-functional-programming" class="slide level2">
+<h1>What is Functional Programming?</h1>
+</section><section id="programming-is-encoding" class="slide level2">
+<h1>Programming is Encoding</h1>
+<ul>
+<li>Encoding the solution description into some (formal) system</li>
+<li>Therefore Functional Programming is encoding the description into (mathematical) function</li>
+<li>Function is first-class value</li>
+</ul>
+<figure>
+<img src="image/func_compose.png" />
+</figure>
+</section><section id="comparing-to-other-programming-paradigms-1" class="slide level2">
+<h1>Comparing to other Programming Paradigms (1)</h1>
+<ul>
+<li>Encoding the pattern into the Jacquard Loom</li>
+</ul>
+<figure>
+<img src="image/jacquard_loom.jpg" />
+</figure>
+</section><section id="comparing-to-other-programming-paradigms-2" class="slide level2">
+<h1>Comparing to other Programming Paradigms (2)</h1>
+<ul>
+<li>Imperative Programming encodes the description into lines of instructions, and its data
+<ul>
+<li>From Machine instructions to Assembly Language</li>
+<li>Categorize bit-pattern on a physical machine.</li>
+</ul></li>
+<li>Procedural Programming encodes the description into lines of subprograms</li>
+</ul>
+</section><section id="comparing-to-other-programming-paradigms-3" class="slide level2">
+<h1>Comparing to other Programming Paradigms (3)</h1>
+<ul>
+<li>Object-Oriendted Programming encodes the description into Object interaction and Message Passing
+<ul>
+<li>At this moment in most cases, when we are saying &quot;Design Patterns&quot;, what we are saying is &quot;OOP Design Patterns&quot;</li>
+<li><a href="http://lists.squeakfoundation.org/pipermail/squeak-dev/1998-October/017019.html">Alan Kay stress that the most important property of OOP is message passing, but not Object</a></li>
+</ul></li>
+</ul>
+</section><section id="comparing-to-other-programming-paradigms-4" class="slide level2">
+<h1>Comparing to other Programming Paradigms (4)</h1>
+<ul>
+<li>Visual Programming
+<ul>
+<li>A programming language doesn't have to be text-based</li>
+<li>Encode description into Graph</li>
+</ul></li>
+</ul>
+</section><section id="theorem-prover" class="slide level2">
+<h1>Theorem Prover</h1>
+<ul>
+<li>Logicism: The theory that mathematics is an extension of logic and therefore some or all mathematics is reducible to logic</li>
+<li>Encode the description into a propositional logic statement.</li>
+<li>A logical statement is a theorem</li>
+<li>Programming is proving a theorem</li>
+</ul>
+</section><section id="human-makes-mistakes" class="slide level2">
+<h1>Human makes Mistakes</h1>
+<ul>
+<li>We introduces different paradigm of composing, but we human make mistakes when doing composition.</li>
+<li>If no type, it will cause runtime error, or burn-out circuit boards</li>
+</ul>
+<figure>
+<img src="image/type_unsafe_compose.png" />
+</figure>
+<ul>
+<li>To prevent ridiculous errors, we check type.</li>
+</ul>
+<figure>
+<img src="image/type_check_compose.png" />
+</figure>
+</section><section id="real-world-example-of-untyped-or-single-type" class="slide level2">
+<h1>Real World example of Untyped (or single type)</h1>
+<ul>
+<li>Untyped example: Bash
+<ul>
+<li>put a file named as &quot;-rf&quot;</li>
+<li>then &quot;rm *&quot;</li>
+<li>then all of directories and files will be deleted.</li>
+</ul></li>
+<li>In Bash, the only type of the language is &quot;String&quot;</li>
+</ul>
+</section><section id="mainstream-pl-type-system-defects" class="slide level2">
+<h1>Mainstream PL type system defects</h1>
+<ul>
+<li>Tony Hoare said &quot;Null Reference&quot; is his billion-dollar mistake.</li>
+<li>In java, &quot;Integer&quot; type is actually consists of &quot;integer&quot; and &quot;null&quot;</li>
+<li>Option Type: &quot;Just 1&quot; or &quot;Nothing&quot;.</li>
+<li>Compiler would complain when pass an option type value to a Integer slot.</li>
+</ul>
 <iframe src="http://www.infoq.com/presentations/Null-References-The-Billion-Dollar-Mistake-Tony-Hoare" width="100%" height="400">
 </iframe>
-
-
-
-
----
-
-
-## More Advanced Type System
-
-* Type inference (Could be Hindley Milner, System F, or System Fw)
-
-    ```
-    Prelude> :t (1+1)
-    (1+1) :: Num a => a
-    Prelude> :t (1+1.0)
-    (1+1.0) :: Fractional a => a
-    ```
-
-* Algebraic data types  (recursively defined types)
-
-    ```
-    data List a = Nil | Cons a (List a)
-    ```
-
-* Parametric Type variale 
-
-    ```
-    data Maybe a = Just a | Nothing
-    ```
-
-
-
----
-
-
-## Pure (Function)
-
-* The function always evaluates the same result value given the same argument value(s). The function result value cannot depend on any hidden information or state that may change as program execution proceeds or between different executions of the program, nor can it depend on any external input from I/O devices.
-* Evaluation of the result does not cause any semantically observable side effect or output, such as mutation of mutable objects or output to I/O devices.
-
-
-
----
-
-
-## Lazy Evaluation
-
-* An evaluation strategy which delays the evaluation of an expression until its value is needed (lazy evaluation) and which also avoids repeated evaluations (sharing)
-
-    ```
-    if a then b else c
-    ```
-
-* evaluates (a), then if and only if (a) evaluates to true does it evaluate (b), otherwise it evaluates (c). That is, either (b) or (c) will not be evaluated.
-
-
-
-
----
-
-
-## An Overloook of Haskell
-
-
-
-
----
-
-
-## Getting started with Haskell
-
-* Install the [Haskell Platform](http://www.haskell.org/platform/), which includes the GHC(Glasgow Haskell Compiler)
-* Create a file called `hello.hs` with the following contents:
-
-    ```
-    main = putStrLn "Hello, world!"
-    ```
-
-* Compile your program to a native executable like this:
-
-    ```
-    $ ghc --make hello
-    [1 of 1] Compiling Main             ( hello.hs, hello.o )
-    Linking hello ...
-    $ ./hello
-    Hello, world!
-    ```
-
-
-
----
-
-
-## Bindings (1)
-
-* Haskell uses the `=` sign to declare *bindings*:
-
-    ```
-    x = 2                   -- Two hyphens introduce a comment
-    y = 3                   --    ...that continues to end of line.
-    main = let z = x + y    -- let introduces local bindings
-           in print z       -- program will print 5
-    ```
-
-* A binding may declare a *function* of one or more arguments
-    * Function and arguments are separated by spaces (when defining or
-      invoking them)
-
-    ```
-    add arg1 arg2 = arg1 + arg2   -- defines function add
-    five = add 2 3                -- invokes function add
-    ```
-
-* Parentheses can wrap compound expressions, must do so for arguments
-
-    ```
-    bad = print add 2 3     -- error! (print should have only 1 argument)
-    ```
-
-    ```
-    main = print (add 2 3)  -- ok, calls print with 1 argument, 5
-    ```
-
-
-
----
-
-
-## Bindings (2)
-
-* Unlike variables in imperative languages, Haskell bindings are
-    * *immutable* - can only bind a symbol once in a give scope<br>
-      (We still call bound symbols "variables" though)
-
-    ```
-    x = 5
-    x = 6                      -- error, cannot re-bind x
-    ```
-
-    * *order-independent* - order of bindings in source code does not
-       matter
-    * *lazy* - definitions of symbols are evaluated only when needed
-
-    ```
-    safeDiv x y =
-        let q = div x y        -- safe as q never evaluated if y == 0
-        in if y == 0 then 0 else q
-    main = print (safeDiv 1 0) -- prints 0
-    ```
-
-
-
----
-
-
-
-## Bindings (3)
-
-* *recursive* - the bound symbol is in scope within its own
-       definition
-
-    ```
-    x = 5                 -- this x is not used in main
-
-    main = let x = x + 1  -- introduces new x, defined in terms of itself
-           in print x     -- program "diverges" (i.e., loops forever)
-    ```
-
-
-
----
-
-
-
-## How to program without mutable variables? (1)
-
-* In C, we use mutable variables to create loops:
-
-	``` 
-	long factorial (int n)
-	{
-	  long result = 1;
-	  while (n > 1)
-	    result *= n--;
-	  return result;
-	}
-	```
-
-
-
----
-
-
-## How to program without mutable variables? (2)
-
-* In Haskell, can use recursion to "re-bind" argument symbols in new
-  scope
-
-	``` 
-	factorial n = if n > 1
-	              then n * factorial (n-1)
-	              else 1
-	```
-
-    * Recursion often fills a similar need to mutable variables
-    * But the above Haskell factorial is inferior to the C one--why?
-
-
-
-
----
-
-
-## Tail recursion (1)
-
-* Each recursive call may require a stack frame
-    * This Haskell code requires `n` stack frames
-
-        ``` 
-        factorial n = if n > 1 then n * factorial (n-1) else 1
-        ```
-
-    * By contrast, our C factorial ran in constant space
-* Fortunately, Haskell supports optimized *tail recursion*
-    * A function is tail recursive if it ends with a call to itself
-    * Unfortunately, `factorial n` multiplies by `n` *after*
-      evaluating `factorial (n-1)`
-
-
-
----
-
-
-## Tail recursion (2)
-
-* Idea: use *accumulator* argument to make calls tail recursive
-
-    ``` 
-    factorial n = let loop acc n' = if n' > 1
-                                    then loop (acc * n') (n' - 1)
-                                    else acc
-                  in loop 1 n
-    ``` 
-
-    * Here `loop` is tail recursive, compiles to an actual loop
-
-
-
----
-
-
-## Every expression and binding has a type (1)
-
-* Some basic types:
-    * `Bool` - either `True` or `False`
-    * `Char` - a unicode code point (i.e., a character)
-    * `Int` - fixed-size integer
-    * `Integer` - an arbitrary-size integer
-    * `Double` - an IEEE double-precision floating-point number
-    * *type1* `->` *type2* - a function from *type1* to *type2*
-    * `(`*type1*`,` *type2*`,` ...`,` *typeN*`)` - a tuple
-    * `()` - a zero-tuple, pronounced *unit* (kind of like `void` in
-      C); there only one value of this type, also written `()`
-
-
-
----
-
-
-## Every expression and binding has a type (2)
-
-* You can declare the type of a symbol or expression with `::`
-
-    ``` 
-    x :: Integer
-    x = (1 :: Integer) + (1 :: Integer) :: Integer
-    ```
-
-    * `::` has lower precedence than any function operators (including
-      `+`)
-
-
-
-
----
-
-
-## More on types (1)
-
-* Function application happens one argument at a time
-  (a.k.a. "*currying*")
-
-    ``` 
-    add :: Integer -> (Integer -> Integer)
-    add arg1 arg2 = arg1 + arg2
-    ```
-
-    * So `add 2 3` is equivalent to `(add 2) 3`
-    * `(add 2)` takes 3 returns 5, so `(add 2) has type Integer -> Integer`
-    * `->` associates to the right, so parens usually omitted in
-      multi-argument function types:<br>
-      `fn ::` *argType1* `->` *argType2* `->` ... `->` *argTypeN* `->`
-      *resultType*
-
-
-
----
-
-
-## More on types (2)
-
-* Usually the compiler can infer types
-    * You can ask GHCI to show you inferred types with `:t`
-
-    ```
-    *Main> :t add
-    add :: Integer -> Integer -> Integer
-    ```
-
-    * Good practice to declare types of top-level bindings
-      anyway (compiler warns if missing)
-
-
-
----
-
-
-## User-defined data types (1)
-
-* The `data` keyword declares user-defined data types (like `struct`
-  in C), E.g.:
-
-    ``` 
-    data PointT = PointC Double Double deriving Show
-    ```
-
-    * This declaration declares a new type, `PointT`, and constructor,
-      `PointC`
-    * A value of type `PointT` contains two `Double`s
-    * `deriving Show` means you can print the type (helpful in GHCI)
-
-* Note that data types and constructors must start with capital letters
-
-
-
----
-
-
-## User-defined data types (2)
-
-* Types and constructors can use the same name (often do), E.g.:
-    
-    ``` 
-    data Point = Point Double Double deriving Show
-    ``` 
-
-* One type can have multiple constructors (like a tagged union):
-
-    ``` 
-    data Point = Cartesian Double Double
-               | Polar Double Double
-                 deriving Show
-    ```
-
-    ``` 
-    data Color = Red | Green | Blue | Indigo | Violet deriving Show
-    ```
-
-
-
----
-
-
-## Using data types (1)
-
-* Constructors act like functions producing values of their types
-
-    ``` 
-    data Point = Point Double Double deriving Show
-    myPoint :: Point
-    myPoint = Point 1.0 1.0
-    ```
-
-    ``` 
-    data Color = Red | Green | Blue | Indigo | Violet deriving Show
-    myColor :: Color
-    myColor = Red
-    ```
-
-
-
----
-
-
-## Using data types (2)
-
-* `case` statements & function bindings "de-construct" values with
-  *patterns*
-
-    ``` 
-    getX, getMaxCoord :: Point -> Double
-    getX point = case point of
-                   Point x y -> x
-    getMaxCoord (Point x y) | x > y     = x
-                            | otherwise = y
-    ```
-
-    ``` 
-    isRed :: Color -> Bool
-    isRed Red = True        -- Only matches constructor Red
-    isRed c   = False       -- Lower-case c just a variable
-    ```
-
-
-
----
-
-
-## Parameterized types (1)
-
-* Types can have parameters sort of the way functions do
-    * Type parameters start with lower-case letters
-    * Some examples from the standard Prelude
-
-    ``` 
-    data Maybe a = Just a
-                 | Nothing
-    ```
-
-    ``` 
-    data Either a b = Left a
-                    | Right b
-    ```
-
-
----
-
-
-
-## Parameterized types (2)
-
-* You can see these at work in GHCI:
-
-    ```
-    Prelude> :t Just True
-    Just True :: Maybe Bool
-    Prelude> :t Left True
-    Left True :: Either Bool b   
-    ```
-
-* Notice the type of `Left True` contains a type variable, `b`
-    * Expression `Left True` can be of type `Either Bool b` for any
-      type `b`
-    * This is an example of a feature called *parametric polymorphism*
-
-
-
----
-
-
-## More deconstruction tips
-
-* Special variable "`_`" can be bound but not used
-    * Use it when you don't care about a value:
-
-    ``` 
-    isJust :: Maybe a -> Bool      -- note parametric polymorphism
-    isJust (Just _) = True
-    isJust Nothing  = False
-    ```
-
-    ``` 
-    isRed Red = True
-    isRed _   = False              -- we don't need the non-red value
-    ```
-
-    * Compiler warns if a bound variable not used; `_` avoids this
-
-
-
----
-
-
-## Lists (1)
-
-* We could define homogeneous lists with the `data` keyword
-
-    ``` 
-    data List a = Cons a (List a) | Nil
-
-    oneTwoThree = (Cons 1 (Cons 2 (Cons 3 Nil))) :: List Integer
-    ```
-
-
-
----
-
-
-## Lists (2)
-
-* But Haskell has built-in lists with syntactic sugar
-    * Instead of `List Integer`, the type is written `[Integer]`
-    * Instead of `Cons`, the constructor is called `:` and is *infix*
-    * Instead of `Nil`, the empty list is called `[]`
-
-    ``` 
-    oneTwoThree = 1:2:3:[] :: [Integer]
-    ```
-
-    * But there are even more convenient syntaxes for the same list:
-
-    ``` 
-    oneTwoThree' = [1, 2, 3]    -- comma-separated elements within brackets
-    oneTwoThree'' = [1..3]      -- define list by a range
-    ```
-
-* A `String` is just a list of `Char`, so `['a', 'b', 'c'] == "abc"`
-
-
----
-
-
-
-## Some basic list functions in Prelude (1)
-
-``` 
-head :: [a] -> a
+</section><section id="more-advanced-type-system" class="slide level2">
+<h1>More Advanced Type System</h1>
+<ul>
+<li><p>Type inference (Could be Hindley Milner, System F, or System Fw)</p>
+<pre><code>Prelude&gt; :t (1+1)
+(1+1) :: Num a =&gt; a
+Prelude&gt; :t (1+1.0)
+(1+1.0) :: Fractional a =&gt; a</code></pre></li>
+<li><p>Algebraic data types (recursively defined types)</p>
+<pre><code>data List a = Nil | Cons a (List a)</code></pre></li>
+<li><p>Parametric Type variale</p>
+<pre><code>data Maybe a = Just a | Nothing</code></pre></li>
+</ul>
+</section><section id="pure-function" class="slide level2">
+<h1>Pure (Function)</h1>
+<ul>
+<li>The function always evaluates the same result value given the same argument value(s). The function result value cannot depend on any hidden information or state that may change as program execution proceeds or between different executions of the program, nor can it depend on any external input from I/O devices.</li>
+<li>Evaluation of the result does not cause any semantically observable side effect or output, such as mutation of mutable objects or output to I/O devices.</li>
+</ul>
+</section><section id="lazy-evaluation" class="slide level2">
+<h1>Lazy Evaluation</h1>
+<ul>
+<li><p>An evaluation strategy which delays the evaluation of an expression until its value is needed (lazy evaluation) and which also avoids repeated evaluations (sharing)</p>
+<pre><code>if a then b else c</code></pre></li>
+<li><p>evaluates (a), then if and only if (a) evaluates to true does it evaluate (b), otherwise it evaluates (c). That is, either (b) or (c) will not be evaluated.</p></li>
+</ul>
+</section><section id="an-overloook-of-haskell" class="slide level2">
+<h1>An Overloook of Haskell</h1>
+</section><section id="getting-started-with-haskell" class="slide level2">
+<h1>Getting started with Haskell</h1>
+<ul>
+<li>Install the <a href="http://www.haskell.org/platform/">Haskell Platform</a>, which includes the GHC(Glasgow Haskell Compiler)</li>
+<li><p>Create a file called <code>hello.hs</code> with the following contents:</p>
+<pre><code>main = putStrLn &quot;Hello, world!&quot;</code></pre></li>
+<li><p>Compile your program to a native executable like this:</p>
+<pre><code>$ ghc --make hello
+[1 of 1] Compiling Main             ( hello.hs, hello.o )
+Linking hello ...
+$ ./hello
+Hello, world!</code></pre></li>
+</ul>
+</section><section id="bindings-1" class="slide level2">
+<h1>Bindings (1)</h1>
+<ul>
+<li><p>Haskell uses the <code>=</code> sign to declare <em>bindings</em>:</p>
+<pre><code>x = 2                   -- Two hyphens introduce a comment
+y = 3                   --    ...that continues to end of line.
+main = let z = x + y    -- let introduces local bindings
+       in print z       -- program will print 5</code></pre></li>
+<li>A binding may declare a <em>function</em> of one or more arguments
+<ul>
+<li>Function and arguments are separated by spaces (when defining or invoking them)</li>
+</ul>
+<pre><code>add arg1 arg2 = arg1 + arg2   -- defines function add
+five = add 2 3                -- invokes function add</code></pre></li>
+<li><p>Parentheses can wrap compound expressions, must do so for arguments</p>
+<pre><code>bad = print add 2 3     -- error! (print should have only 1 argument)</code></pre>
+<pre><code>main = print (add 2 3)  -- ok, calls print with 1 argument, 5</code></pre></li>
+</ul>
+</section><section id="bindings-2" class="slide level2">
+<h1>Bindings (2)</h1>
+<ul>
+<li>Unlike variables in imperative languages, Haskell bindings are
+<ul>
+<li><em>immutable</em> - can only bind a symbol once in a give scope<br> (We still call bound symbols &quot;variables&quot; though)</li>
+</ul>
+<pre><code>x = 5
+x = 6                      -- error, cannot re-bind x</code></pre>
+<ul>
+<li><em>order-independent</em> - order of bindings in source code does not matter</li>
+<li><em>lazy</em> - definitions of symbols are evaluated only when needed</li>
+</ul>
+<pre><code>safeDiv x y =
+    let q = div x y        -- safe as q never evaluated if y == 0
+    in if y == 0 then 0 else q
+main = print (safeDiv 1 0) -- prints 0</code></pre></li>
+</ul>
+</section><section id="bindings-3" class="slide level2">
+<h1>Bindings (3)</h1>
+<ul>
+<li><p><em>recursive</em> - the bound symbol is in scope within its own definition</p>
+<pre><code>x = 5                 -- this x is not used in main
+
+main = let x = x + 1  -- introduces new x, defined in terms of itself
+       in print x     -- program &quot;diverges&quot; (i.e., loops forever)</code></pre></li>
+</ul>
+</section><section id="how-to-program-without-mutable-variables-1" class="slide level2">
+<h1>How to program without mutable variables? (1)</h1>
+<ul>
+<li><p>In C, we use mutable variables to create loops:</p>
+<pre><code>long factorial (int n)
+{
+  long result = 1;
+  while (n &gt; 1)
+    result *= n--;
+  return result;
+}</code></pre></li>
+</ul>
+</section><section id="how-to-program-without-mutable-variables-2" class="slide level2">
+<h1>How to program without mutable variables? (2)</h1>
+<ul>
+<li><p>In Haskell, can use recursion to &quot;re-bind&quot; argument symbols in new scope</p>
+<pre><code>factorial n = if n &gt; 1
+              then n * factorial (n-1)
+              else 1</code></pre>
+<ul>
+<li>Recursion often fills a similar need to mutable variables</li>
+<li>But the above Haskell factorial is inferior to the C one--why?</li>
+</ul></li>
+</ul>
+</section><section id="tail-recursion-1" class="slide level2">
+<h1>Tail recursion (1)</h1>
+<ul>
+<li>Each recursive call may require a stack frame
+<ul>
+<li><p>This Haskell code requires <code>n</code> stack frames</p>
+<pre><code>factorial n = if n &gt; 1 then n * factorial (n-1) else 1</code></pre></li>
+<li>By contrast, our C factorial ran in constant space</li>
+</ul></li>
+<li>Fortunately, Haskell supports optimized <em>tail recursion</em>
+<ul>
+<li>A function is tail recursive if it ends with a call to itself</li>
+<li>Unfortunately, <code>factorial n</code> multiplies by <code>n</code> <em>after</em> evaluating <code>factorial (n-1)</code></li>
+</ul></li>
+</ul>
+</section><section id="tail-recursion-2" class="slide level2">
+<h1>Tail recursion (2)</h1>
+<ul>
+<li><p>Idea: use <em>accumulator</em> argument to make calls tail recursive</p>
+<pre><code>factorial n = let loop acc n&#39; = if n&#39; &gt; 1
+                                then loop (acc * n&#39;) (n&#39; - 1)
+                                else acc
+              in loop 1 n</code></pre>
+<ul>
+<li>Here <code>loop</code> is tail recursive, compiles to an actual loop</li>
+</ul></li>
+</ul>
+</section><section id="every-expression-and-binding-has-a-type-1" class="slide level2">
+<h1>Every expression and binding has a type (1)</h1>
+<ul>
+<li>Some basic types:
+<ul>
+<li><code>Bool</code> - either <code>True</code> or <code>False</code></li>
+<li><code>Char</code> - a unicode code point (i.e., a character)</li>
+<li><code>Int</code> - fixed-size integer</li>
+<li><code>Integer</code> - an arbitrary-size integer</li>
+<li><code>Double</code> - an IEEE double-precision floating-point number</li>
+<li><em>type1</em> <code>-&gt;</code> <em>type2</em> - a function from <em>type1</em> to <em>type2</em></li>
+<li><code>(</code><em>type1</em><code>,</code> <em>type2</em><code>,</code> ...<code>,</code> <em>typeN</em><code>)</code> - a tuple</li>
+<li><code>()</code> - a zero-tuple, pronounced <em>unit</em> (kind of like <code>void</code> in C); there only one value of this type, also written <code>()</code></li>
+</ul></li>
+</ul>
+</section><section id="every-expression-and-binding-has-a-type-2" class="slide level2">
+<h1>Every expression and binding has a type (2)</h1>
+<ul>
+<li><p>You can declare the type of a symbol or expression with <code>::</code></p>
+<pre><code>x :: Integer
+x = (1 :: Integer) + (1 :: Integer) :: Integer</code></pre>
+<ul>
+<li><code>::</code> has lower precedence than any function operators (including <code>+</code>)</li>
+</ul></li>
+</ul>
+</section><section id="more-on-types-1" class="slide level2">
+<h1>More on types (1)</h1>
+<ul>
+<li><p>Function application happens one argument at a time (a.k.a. &quot;<em>currying</em>&quot;)</p>
+<pre><code>add :: Integer -&gt; (Integer -&gt; Integer)
+add arg1 arg2 = arg1 + arg2</code></pre>
+<ul>
+<li>So <code>add 2 3</code> is equivalent to <code>(add 2) 3</code></li>
+<li><code>(add 2)</code> takes 3 returns 5, so <code>(add 2) has type Integer -&gt; Integer</code></li>
+<li><code>-&gt;</code> associates to the right, so parens usually omitted in multi-argument function types:<br> <code>fn ::</code> <em>argType1</em> <code>-&gt;</code> <em>argType2</em> <code>-&gt;</code> ... <code>-&gt;</code> <em>argTypeN</em> <code>-&gt;</code> <em>resultType</em></li>
+</ul></li>
+</ul>
+</section><section id="more-on-types-2" class="slide level2">
+<h1>More on types (2)</h1>
+<ul>
+<li>Usually the compiler can infer types
+<ul>
+<li>You can ask GHCI to show you inferred types with <code>:t</code></li>
+</ul>
+<pre><code>*Main&gt; :t add
+add :: Integer -&gt; Integer -&gt; Integer</code></pre>
+<ul>
+<li>Good practice to declare types of top-level bindings anyway (compiler warns if missing)</li>
+</ul></li>
+</ul>
+</section><section id="user-defined-data-types-1" class="slide level2">
+<h1>User-defined data types (1)</h1>
+<ul>
+<li><p>The <code>data</code> keyword declares user-defined data types (like <code>struct</code> in C), E.g.:</p>
+<pre><code>data PointT = PointC Double Double deriving Show</code></pre>
+<ul>
+<li>This declaration declares a new type, <code>PointT</code>, and constructor, <code>PointC</code></li>
+<li>A value of type <code>PointT</code> contains two <code>Double</code>s</li>
+<li><code>deriving Show</code> means you can print the type (helpful in GHCI)</li>
+</ul></li>
+<li><p>Note that data types and constructors must start with capital letters</p></li>
+</ul>
+</section><section id="user-defined-data-types-2" class="slide level2">
+<h1>User-defined data types (2)</h1>
+<ul>
+<li><p>Types and constructors can use the same name (often do), E.g.:</p>
+<pre><code>data Point = Point Double Double deriving Show</code></pre></li>
+<li><p>One type can have multiple constructors (like a tagged union):</p>
+<pre><code>data Point = Cartesian Double Double
+           | Polar Double Double
+             deriving Show</code></pre>
+<pre><code>data Color = Red | Green | Blue | Indigo | Violet deriving Show</code></pre></li>
+</ul>
+</section><section id="using-data-types-1" class="slide level2">
+<h1>Using data types (1)</h1>
+<ul>
+<li><p>Constructors act like functions producing values of their types</p>
+<pre><code>data Point = Point Double Double deriving Show
+myPoint :: Point
+myPoint = Point 1.0 1.0</code></pre>
+<pre><code>data Color = Red | Green | Blue | Indigo | Violet deriving Show
+myColor :: Color
+myColor = Red</code></pre></li>
+</ul>
+</section><section id="using-data-types-2" class="slide level2">
+<h1>Using data types (2)</h1>
+<ul>
+<li><p><code>case</code> statements &amp; function bindings &quot;de-construct&quot; values with <em>patterns</em></p>
+<pre><code>getX, getMaxCoord :: Point -&gt; Double
+getX point = case point of
+               Point x y -&gt; x
+getMaxCoord (Point x y) | x &gt; y     = x
+                        | otherwise = y</code></pre>
+<pre><code>isRed :: Color -&gt; Bool
+isRed Red = True        -- Only matches constructor Red
+isRed c   = False       -- Lower-case c just a variable</code></pre></li>
+</ul>
+</section><section id="parameterized-types-1" class="slide level2">
+<h1>Parameterized types (1)</h1>
+<ul>
+<li>Types can have parameters sort of the way functions do
+<ul>
+<li>Type parameters start with lower-case letters</li>
+<li>Some examples from the standard Prelude</li>
+</ul>
+<pre><code>data Maybe a = Just a
+             | Nothing</code></pre>
+<pre><code>data Either a b = Left a
+                | Right b</code></pre></li>
+</ul>
+</section><section id="parameterized-types-2" class="slide level2">
+<h1>Parameterized types (2)</h1>
+<ul>
+<li><p>You can see these at work in GHCI:</p>
+<pre><code>Prelude&gt; :t Just True
+Just True :: Maybe Bool
+Prelude&gt; :t Left True
+Left True :: Either Bool b   </code></pre></li>
+<li>Notice the type of <code>Left True</code> contains a type variable, <code>b</code>
+<ul>
+<li>Expression <code>Left True</code> can be of type <code>Either Bool b</code> for any type <code>b</code></li>
+<li>This is an example of a feature called <em>parametric polymorphism</em></li>
+</ul></li>
+</ul>
+</section><section id="more-deconstruction-tips" class="slide level2">
+<h1>More deconstruction tips</h1>
+<ul>
+<li>Special variable &quot;<code>_</code>&quot; can be bound but not used
+<ul>
+<li>Use it when you don't care about a value:</li>
+</ul>
+<pre><code>isJust :: Maybe a -&gt; Bool      -- note parametric polymorphism
+isJust (Just _) = True
+isJust Nothing  = False</code></pre>
+<pre><code>isRed Red = True
+isRed _   = False              -- we don&#39;t need the non-red value</code></pre>
+<ul>
+<li>Compiler warns if a bound variable not used; <code>_</code> avoids this</li>
+</ul></li>
+</ul>
+</section><section id="lists-1" class="slide level2">
+<h1>Lists (1)</h1>
+<ul>
+<li><p>We could define homogeneous lists with the <code>data</code> keyword</p>
+<pre><code>data List a = Cons a (List a) | Nil
+
+oneTwoThree = (Cons 1 (Cons 2 (Cons 3 Nil))) :: List Integer</code></pre></li>
+</ul>
+</section><section id="lists-2" class="slide level2">
+<h1>Lists (2)</h1>
+<ul>
+<li>But Haskell has built-in lists with syntactic sugar
+<ul>
+<li>Instead of <code>List Integer</code>, the type is written <code>[Integer]</code></li>
+<li>Instead of <code>Cons</code>, the constructor is called <code>:</code> and is <em>infix</em></li>
+<li>Instead of <code>Nil</code>, the empty list is called <code>[]</code></li>
+</ul>
+<pre><code>oneTwoThree = 1:2:3:[] :: [Integer]</code></pre>
+<ul>
+<li>But there are even more convenient syntaxes for the same list:</li>
+</ul>
+<pre><code>oneTwoThree&#39; = [1, 2, 3]    -- comma-separated elements within brackets
+oneTwoThree&#39;&#39; = [1..3]      -- define list by a range</code></pre></li>
+<li>A <code>String</code> is just a list of <code>Char</code>, so <code>['a', 'b', 'c'] == &quot;abc&quot;</code></li>
+</ul>
+</section><section id="some-basic-list-functions-in-prelude-1" class="slide level2">
+<h1>Some basic list functions in Prelude (1)</h1>
+<pre><code>head :: [a] -&gt; a
 head (x:_) = x
-head []    = error "head: empty list"
-```
-
-``` 
-tail :: [a] -> a             -- all but first element
+head []    = error &quot;head: empty list&quot;</code></pre>
+<pre><code>tail :: [a] -&gt; a             -- all but first element
 tail (_:xs) = xs
-tail []     = error "tail: empty list"
-```
-
-``` 
-a ++ b :: [a] -> [a] -> [a]  -- infix operator concatenate lists
+tail []     = error &quot;tail: empty list&quot;</code></pre>
+<pre><code>a ++ b :: [a] -&gt; [a] -&gt; [a]  -- infix operator concatenate lists
 [] ++ ys = ys
-(x:xs) ++ ys = x : xs ++ ys
-```
-
-
-
----
-
-
-## Some basic list functions in Prelude (2)
-
-``` 
-length :: [a] -> Int         -- This code is from language spec
+(x:xs) ++ ys = x : xs ++ ys</code></pre>
+</section><section id="some-basic-list-functions-in-prelude-2" class="slide level2">
+<h1>Some basic list functions in Prelude (2)</h1>
+<pre><code>length :: [a] -&gt; Int         -- This code is from language spec
 length []    =  0            -- GHC implements differently, why?
-length (_:l) =  1 + length l
-```
-
-``` 
-filter :: (a -> Bool) -> [a] -> [a]
+length (_:l) =  1 + length l</code></pre>
+<pre><code>filter :: (a -&gt; Bool) -&gt; [a] -&gt; [a]
 filter pred [] = []
 filter pred (x:xs)
   | pred x     = x : filter pred xs
-  | otherwise  = filter pred xs
-```
+  | otherwise  = filter pred xs</code></pre>
+<p>Note function <code>error :: String -&gt; a</code> reports assertion failures</p>
+</section><section id="lambda-abstraction" class="slide level2">
+<h1>Lambda abstraction</h1>
+<ul>
+<li>Sometimes you want to name the arguments but not the function</li>
+<li>Haskell allows anonymous functions through <em>lambda abstraction</em>
+<ul>
+<li>The notation is <code>\</code><em>variable(s)</em> <code>-&gt;</code> <em>body</em> (where <code>\</code> is pronounced &quot;lambda&quot;)</li>
+</ul></li>
+<li><p>Example:</p>
+<pre><code>countLowercaseAndDigits :: String -&gt; Int
+countLowercaseAndDigits = length . filter (\c -&gt; isLower c || isDigit c)</code></pre></li>
+</ul>
+</section><section id="hoogle" class="slide level2">
+<h1>Hoogle</h1>
+<ul>
+<li><a href="#/hoogle">Hoogle</a> is a search engine just for Haskell functions</li>
+</ul>
+</section><section id="try-haskell" class="slide level2">
+<h1>Try Haskell</h1>
+<ul>
+<li><a href="http://tryhaskell.org/">Try Haskell</a></li>
+</ul>
+</section><section id="courses" class="slide level2">
+<h1>Courses</h1>
+<ul>
+<li><a href="http://flolac.iis.sinica.edu.tw/flolac12/doku.php?id=zh-tw:start">FLOLAC 2012</a></li>
+<li><a href="http://www.scs.stanford.edu/11au-cs240h/notes/">CS240h</a></li>
+<li><a href="http://verify.rwth-aachen.de/fp05/">Functional Programming</a></li>
+<li><a href="http://video.s-inf.de/#FP.2005-SS-Giesl.(COt).HD_Videoaufzeichnung">Functional Programming (Video)</a></li>
+</ul>
+</section><section id="books" class="slide level2">
+<h1>Books</h1>
+<ul>
+<li><a href="http://bob.ippoli.to/archives/2013/01/11/getting-started-with-haskell/">Getting Started with Haskell</a></li>
+<li><a href="http://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours">Write yourself a Scheme in 48 Hours</a></li>
+<li><a href="http://en.wikibooks.org/wiki/Haskell">Wikibook - Haskell</a></li>
+<li><a href="http://learnyouahaskell.com/">Learn you a Haskell for GG</a></li>
+<li><a href="http://book.realworldhaskell.org/">Real World Haskell</a></li>
+</ul>
+</section><section id="thank-you" class="slide level2">
+<h1>Thank you</h1>
+</section></section>
+    </div>
+  </div>
 
-Note function `error :: String -> a` reports assertion failures
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.js"></script>
 
+  <script>
 
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Transition style
+        transition: 'fade', // none/fade/slide/convex/concave/zoom
 
----
-
-
-## Lambda abstraction
-
-* Sometimes you want to name the arguments but not the function
-* Haskell allows anonymous functions through *lambda abstraction*
-    * The notation is `\`*variable(s)* `->` *body* (where `\` is
-      pronounced "lambda")
-
-* Example:
-
-    ``` 
-    countLowercaseAndDigits :: String -> Int
-    countLowercaseAndDigits = length . filter (\c -> isLower c || isDigit c)
-    ```
-
-
-
----
-
-
-## Hoogle
-
-* [Hoogle] is a search engine just for Haskell functions
-
-
-
----
-
-
-## Try Haskell
-
-* [Try Haskell](http://tryhaskell.org/)
-
-
-
----
-
-
-## Courses
-
-* [FLOLAC 2012](http://flolac.iis.sinica.edu.tw/flolac12/doku.php?id=zh-tw:start)
-* [CS240h](http://www.scs.stanford.edu/11au-cs240h/notes/)
-* [Functional Programming](http://verify.rwth-aachen.de/fp05/)
-* [Functional Programming (Video)](http://video.s-inf.de/#FP.2005-SS-Giesl.(COt).HD_Videoaufzeichnung)
-
-
-
----
-
-
-## Books 
-
-* [Getting Started with Haskell](http://bob.ippoli.to/archives/2013/01/11/getting-started-with-haskell/)
-* [Write yourself a Scheme in 48 Hours](http://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours)
-* [Wikibook - Haskell](http://en.wikibooks.org/wiki/Haskell)
-* [Learn you a Haskell for GG](http://learnyouahaskell.com/)
-* [Real World Haskell](http://book.realworldhaskell.org/)
-
-
-
----
-
-
-
-## Thank you
-    </textarea>
-    <script>
-        var is_local = (window.location.hostname == "localhost");
-
-        function add_script(src, callback) {
-            var s = document.createElement("script");
-            s.setAttribute("src", src);
-            s.onload = callback;
-            document.body.appendChild(s);
-        }
-
-        function load_slides() {
-            var query = window.location.search.substring(1);
-            var slideshow = remark.create();
-
-            // Setup MathJax
-            MathJax.Hub.Config({
-                tex2jax: {
-                    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-                }
-            });
-
-            MathJax.Hub.Queue(function() {
-                $(MathJax.Hub.getAllJax()).map(function(index, elem) {
-                    return(elem.SourceElement());
-                }).parent().addClass('has-jax');
-            });
-
-            MathJax.Hub.Configured();
-        }
-
-        if (is_local) {
-            add_script("javascript/remark-latest.min.js", function() {
-                add_script("javascript/MathJax.js", load_slides);
-            });
-        } else {
-            add_script("https://gnab.github.io/remark/downloads/remark-latest.min.js", function() {
-                add_script("http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured", load_slides);
-            });
-        }
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
     </script>
-  </body>
+    </body>
 </html>

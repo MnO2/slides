@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <title></title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="reveal.js/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" href="reveal.js/css/theme/white.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="reveal.js/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+
+<section class="slide level1">
+
+<p>class: center, middle</p>
+</section>
+<section id="hindley-milner-type-system" class="slide level1">
+<h1>Hindley Milner Type System</h1>
+</section>
+<section id="why-do-we-need-type-system" class="slide level1">
+<h1>Why do we need Type system ?</h1>
+<ul>
+<li>To check if the program run as we expected</li>
+<li>How far could it go?</li>
+<li>Halting problem</li>
+<li>A meta language</li>
+<li>Unit testing</li>
+<li>a type system, namely that: in it all terms are typed.</li>
+</ul>
+</section>
+<section class="slide level1">
+
+<ul>
+<li>Could the meta language describe a structure, but not a set?</li>
+<li>Define structure? Algebra?</li>
+<li>How about Subtyping? As some of OOPL do?</li>
+<li>It is so hard for such a design problem</li>
+<li>UX is dealing with the general user, PL is serving the need of programmers</li>
+</ul>
+</section>
+<section id="whats-a-machine" class="slide level1">
+<h1>What's a Machine?</h1>
+<ul>
+<li>Algorithm complexity: Abstract machine</li>
+<li>Turing machine</li>
+<li>Real CPU by instruction</li>
+</ul>
+</section>
+<section id="lambda-calculus" class="slide level1">
+<h1>Lambda Calculus</h1>
+<ul>
+<li>Machine for substitution</li>
+<li>Assembly of functional language</li>
+<li>Various extensions of lambda calculus serves as the intermediate form of functional languages</li>
+<li>A single substitution step is called &quot;beta reduction&quot;, or simply reduction</li>
+</ul>
+</section>
+<section id="they-come-with-different-power" class="slide level1">
+<h1>They come with different power</h1>
+<ul>
+<li>Could it be possible I could roll my own type system?</li>
+<li>What if I add/remove rule to type system?</li>
+<li>What's normal life programming language's type system?</li>
+<li>The goal of type system</li>
+</ul>
+</section>
+<section id="hindley-milner-type-rules" class="slide level1">
+<h1>Hindley Milner Type Rules</h1>
+<p><code>$$     \begin{aligned}     e :=\ &amp; x            &amp; \trule{Var} \\          &amp; \lambda x. e  &amp; \trule{Lam} \\          &amp; e\ e          &amp; \trule{App} \\     \end{aligned} $$</code></p>
+<ul>
+<li>Often a construct called &quot;let binding&quot; is added <code>$$ 𝚕𝚎𝚝 a=e 𝚒𝚗 b:=(λa.b)e $$</code></li>
+</ul>
+</section>
+<section class="slide level1">
+
+<ul>
+<li>The complete set of type functions D is arbitrary in HM, except that it must contain at least <code>$$\rightarrow$$</code></li>
+<li>Polytypes (or type schemes) are types containing variables bound by one or more for-all quantifiers</li>
+<li>The quantifiers can only appear top level. No <code>$$\forall \alpha -&gt; \forall \alpha$$</code></li>
+</ul>
+</section>
+<section id="recursion" class="slide level1">
+<h1>Recursion</h1>
+<ul>
+<li>Point to self</li>
+<li>Let rec</li>
+</ul>
+</section>
+<section id="type-system" class="slide level1">
+<h1>Type System</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Exp</span> <span class="fu">=</span> <span class="dt">EVar</span> <span class="dt">EVar</span>
+         <span class="fu">|</span> <span class="dt">ELit</span> <span class="dt">ELit</span>
+         <span class="fu">|</span> <span class="dt">EApp</span> <span class="dt">Exp</span> <span class="dt">Exp</span>
+         <span class="fu">|</span> <span class="dt">EAbs</span> <span class="dt">EVar</span> <span class="dt">Exp</span>
+         <span class="fu">|</span> <span class="dt">ELet</span> <span class="dt">EVar</span> <span class="dt">Exp</span> <span class="dt">Exp</span>
+         <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Ord</span>, <span class="dt">Show</span>)</code></pre></div>
+</section>
+<section id="substitutable" class="slide level1">
+<h1>Substitutable</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Substitutable</span> a <span class="kw">where</span>
+  apply <span class="ot">∷</span> <span class="dt">Subst</span> <span class="ot">→</span> a <span class="ot">→</span> a
+<span class="ot">  freeTvars ::</span> a <span class="ot">-&gt;</span> <span class="dt">Set.Set</span> <span class="dt">TVar</span></code></pre></div>
+</section>
+<section class="slide level1">
+
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Substitutable</span> <span class="dt">Type</span> <span class="kw">where</span>
+  apply _ <span class="dt">TInt</span> <span class="fu">=</span> <span class="dt">TInt</span>
+  apply _ <span class="dt">TBool</span> <span class="fu">=</span> <span class="dt">TBool</span>
+  apply su t<span class="fu">@</span>(<span class="dt">TVar</span> a) <span class="fu">=</span> Map.findWithDefault t a su
+  apply su (t1 <span class="ot">`TArrow`</span> t2) <span class="fu">=</span> apply su t1 <span class="ot">`TArrow`</span> apply su t2
+
+  freeTvars <span class="dt">TInt</span> <span class="fu">=</span> Set.empty
+  freeTvars <span class="dt">TBool</span> <span class="fu">=</span> Set.empty
+  freeTvars (<span class="dt">TVar</span> a) <span class="fu">=</span> Set.singleton a
+  freeTvars (t1 <span class="ot">`TArrow`</span> t2) <span class="fu">=</span> freeTvars t1 <span class="ot">`Set.union`</span> freeTvars t2</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Substitutable</span> a <span class="ot">⇒</span> <span class="dt">Substitutable</span> [a] <span class="kw">where</span>
+  apply <span class="fu">=</span> map ∘ apply
+  freeTvars <span class="fu">=</span> (foldr Set.union Set.empty) ∘ (map freeTvars)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Substitutable</span> <span class="dt">Scheme</span> <span class="kw">where</span>
+  apply su (<span class="dt">Forall</span> as t) <span class="fu">=</span> <span class="dt">Forall</span> as <span class="fu">$</span> apply s&#39; t
+                            <span class="kw">where</span> s&#39; <span class="fu">=</span> foldr Map.delete su as
+  freeTvars (<span class="dt">Forall</span> as t) <span class="fu">=</span> (freeTvars t) <span class="ot">`Set.difference`</span> (Set.fromList as)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Substitutable</span> <span class="dt">TypeEnv</span> <span class="kw">where</span>
+  apply su (<span class="dt">TypeEnv</span> env) <span class="fu">=</span> <span class="dt">TypeEnv</span> <span class="fu">$</span> Map.map (apply su) env
+  freeTvars (<span class="dt">TypeEnv</span> env) <span class="fu">=</span> freeTvars <span class="fu">$</span> Map.elems env</code></pre></div>
+</section>
+<section id="unification" class="slide level1">
+<h1>Unification</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">mgu <span class="ot">∷</span> <span class="dt">MonadError</span> <span class="dt">String</span> m <span class="ot">⇒</span> <span class="dt">Type</span> <span class="ot">→</span> <span class="dt">Type</span> <span class="ot">→</span> m <span class="dt">Subst</span>
+mgu (l <span class="ot">`TArrow`</span> r) (l&#39; <span class="ot">`TArrow`</span> r&#39;) <span class="fu">=</span> <span class="kw">do</span> s1 <span class="ot">←</span> mgu l l&#39;
+                                         s2 <span class="ot">←</span> mgu (apply s1 r) (apply s1 r&#39;)
+                                         return (s1 <span class="ot">`after`</span> s2)
+mgu (<span class="dt">TVar</span> a) t <span class="fu">=</span> varAssign a t
+mgu t (<span class="dt">TVar</span> a) <span class="fu">=</span> varAssign a t
+mgu <span class="dt">TInt</span> <span class="dt">TInt</span> <span class="fu">=</span> return emptySubst
+mgu <span class="dt">TBool</span> <span class="dt">TBool</span> <span class="fu">=</span> return emptySubst
+mgu t1 t2 <span class="fu">=</span> throwError <span class="fu">$</span> <span class="st">&quot;types do no unify: &quot;</span> ⧺ (show t1) ⧺ <span class="st">&quot; vs. &quot;</span> ⧺ (show t2)</code></pre></div>
+</section>
+<section id="inference-1" class="slide level1">
+<h1>Inference (1)</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">ti <span class="ot">∷</span> (<span class="dt">MonadState</span> <span class="dt">TIState</span> m, <span class="dt">MonadError</span> <span class="dt">String</span> m) <span class="ot">⇒</span> <span class="dt">TypeEnv</span> <span class="ot">→</span> <span class="dt">Exp</span> <span class="ot">→</span> m (<span class="dt">Subst</span>, <span class="dt">Type</span>)
+ti _ (<span class="dt">ELit</span> (<span class="dt">LInt</span> _)) <span class="fu">=</span> return (emptySubst, <span class="dt">TInt</span>)
+ti _ (<span class="dt">ELit</span> (<span class="dt">LBool</span> _)) <span class="fu">=</span> return (emptySubst, <span class="dt">TBool</span>)
+ti (<span class="dt">TypeEnv</span> env) (<span class="dt">EVar</span> x) <span class="fu">=</span>•
+  <span class="kw">case</span> Map.lookup x env <span class="kw">of</span>
+    <span class="dt">Nothing</span> <span class="ot">→</span> throwError <span class="fu">$</span> <span class="st">&quot;Unbound Variable: &quot;</span> ⧺ show x
+    <span class="dt">Just</span> s <span class="ot">→</span> do•
+      v <span class="ot">←</span> instantiate s
+      return (emptySubst, v)
+ti env (<span class="dt">EAbs</span> x e) <span class="fu">=</span>•
+  <span class="kw">do</span> tv <span class="ot">←</span> freshTVar <span class="st">&quot;a&quot;</span>
+     <span class="kw">let</span> env&#39; <span class="fu">=</span> env ∖ (x, <span class="dt">Forall</span> [] tv)
+     (s1, t1) <span class="ot">←</span> ti env&#39; e
+     return (s1, (apply s1 tv) <span class="ot">`TArrow`</span> t1)</code></pre></div>
+</section>
+<section id="inference-2" class="slide level1">
+<h1>Inference (2)</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">ti env (<span class="dt">EApp</span> e1 e2) <span class="fu">=</span>
+  <span class="kw">do</span> tv <span class="ot">←</span> freshTVar <span class="st">&quot;a&quot;</span>
+     (s1, t1) <span class="ot">←</span> ti env e1
+     (s2, t2) <span class="ot">←</span> ti (apply s1 env) e2
+     s3 <span class="ot">←</span> mgu (apply s2 t1) (<span class="dt">TArrow</span> t2 tv)
+     return (s3 <span class="ot">`after`</span> s2 <span class="ot">`after`</span> s1, apply s3 tv)</code></pre></div>
+<ul>
+<li>Name shadowing <code>$$λxy.(λxz.x+y)$$</code></li>
+</ul>
+</section>
+<section id="inference-3" class="slide level1">
+<h1>Inference (3)</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">ti env (<span class="dt">ELet</span> x e1 e2) <span class="fu">=</span>
+  <span class="kw">do</span> (s1, t1) <span class="ot">←</span> ti env e1
+     <span class="kw">let</span> env&#39; <span class="fu">=</span> apply s1 env
+         t&#39; <span class="fu">=</span> generalize env&#39; t1
+     (s2, t2) <span class="ot">←</span> ti (env&#39; ∖ (x, t&#39;)) e2
+     return (s1 <span class="ot">`after`</span> s2, t2)</code></pre></div>
+</section>
+<section id="the-peril-of-let-polymorphism" class="slide level1">
+<h1>The peril of Let-polymorphism</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">lambda f <span class="fu">:</span> (forall <span class="dt">A</span><span class="fu">.</span> <span class="dt">A</span> <span class="ot">-&gt;</span> <span class="dt">A</span>)<span class="fu">.</span> (f <span class="dt">Int</span> <span class="dv">1</span>, f <span class="dt">String</span> <span class="st">&quot;hello&quot;</span>)</code></pre></div>
+</section>
+<section id="does-there-exist-a-type-system-for-a-non-let-polymorphic-lambda-calculus" class="slide level1">
+<h1>Does there exist a type system for a non-let-polymorphic lambda calculus?</h1>
+</section>
+    </div>
+  </div>
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Transition style
+        transition: 'fade', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>
