@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Paul Meng">
+  <title>Writing Atom plugin in Haskell</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="reveal.js/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="reveal.js/css/theme/white.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="reveal.js/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+  <h1 class="title">Writing Atom plugin in Haskell</h1>
+  <h2 class="author">Paul Meng</h2>
+</section>
+
+<section id="whats-atom" class="slide level2">
+<h1>What's Atom</h1>
+<ul>
+<li>Github's Editor</li>
+<li>Underlying is Electron, which is based on Webkit</li>
+<li>Programmable Editor</li>
+<li>Rich interactive environment like Emacs but with Javascript</li>
+</ul>
+</section>
+<section id="atom-api" class="slide level2">
+<h1>Atom API</h1>
+<ul>
+<li>Much easier than Neovim.</li>
+<li>And REPL with the Developer Tool make it easy to see live result.</li>
+<li>API are put under <code>atom</code> namespace</li>
+<li><a href="https://atom.io/docs/api/v1.8.0/TextEditor">Editor</a></li>
+</ul>
+</section>
+<section id="javascript-call-ghcjs" class="slide level2">
+<h1>Javascript call GHCJS</h1>
+<ul>
+<li>GHCJS doesn't explicitly support exporting function.</li>
+<li>It requires workaround to make the two side world communicate to each other.</li>
+</ul>
+<pre><code>foreign import javascript unsafe &quot;renderMarkdown_ = $1&quot;
+    js_set_renderMarkdown :: Callback a -&gt; IO ()</code></pre>
+</section>
+<section id="markdown-preview" class="slide level2">
+<h1>Markdown Preview</h1>
+<ul>
+<li>Live preview of the markdown content.</li>
+<li>With the help of <code>markdown</code> package. Implementing markdown2html is pretty easy.</li>
+</ul>
+<pre><code>renderMarkdown :: JSVal -&gt; IO ()
+renderMarkdown x = do
+  let o = Object x
+  rawMarkdownStr &lt;- getProp &quot;markdownStr&quot; o
+  let markdownStr = textFromJSVal rawMarkdownStr
+  let htmlStr  = (unpack $ renderHtml $ markdown def $ fromChunks [markdownStr])
+  setStringProp (JSS.pack &quot;ret&quot;) (JSS.pack htmlStr) o</code></pre>
+</section>
+<section id="compile-to-js" class="slide level2">
+<h1>Compile to JS</h1>
+<ul>
+<li>Compile to Javascript with GHCJS 0.2</li>
+<li>The target file size is pretty large</li>
+</ul>
+<pre><code>stack exec ghcjs -- -DGHCJS_BROWSER -o render.js render.hs</code></pre>
+<pre><code>$  ls -lh lib/render.js
+-rw-r--r--  1 mno2  staff   6.0M Jun 12 13:00 lib/render.js</code></pre>
+</section>
+<section id="glue-code-in-js" class="slide level2">
+<h1>Glue Code in JS</h1>
+<ul>
+<li>Use the convention option object to pass the content to compiled JS</li>
+<li>Retrieve the return value from modified object</li>
+</ul>
+<pre><code>renderMarkdown(content) {
+  var option = { markdownStr: content }
+  window.renderMarkdown_(option);
+  var html = option.ret;
+
+  var outPath = path.resolve(path.join(os.tmpdir(), &quot;star-platium&quot; + &quot;.html&quot;));
+  fs.writeFileSync(outPath, html, {});
+  this.element.src = &quot;file://&quot; + outPath;
+}</code></pre>
+</section>
+<section id="launching-the-plugin" class="slide level2">
+<h1>Launching the plugin</h1>
+<pre><code>atim install --dev .
+atom --dev .</code></pre>
+</section>
+<section id="thank-you" class="slide level2">
+<h1>Thank you</h1>
+<ul>
+<li><a href="https://github.com/MnO2/star-platium">Code is here</a></li>
+</ul>
+</section>
+    </div>
+  </div>
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Transition style
+        transition: 'fade', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>
